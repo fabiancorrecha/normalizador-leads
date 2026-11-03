@@ -32,6 +32,7 @@ def test_REQ_NOR_028_el_informe_lleva_la_calidad_por_campo_de_la_clinica_a(tmp_p
     }
     assert calidad["por_campo"]["country"]["motivos"] == {"pais_desconocido": 2}
     assert calidad["por_campo"]["full_name"] == {"con_aviso": 0, "porcentaje": 0.0, "motivos": {}}
+    assert informe["extraccion"] == {"extractor": "diccionario", "modelo": None, "prompt": None}
 
 
 def test_REQ_NOR_028_el_informe_lleva_los_campos_no_mapeados_y_los_posibles_duplicados(tmp_path):

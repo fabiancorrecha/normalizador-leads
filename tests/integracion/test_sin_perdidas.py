@@ -7,7 +7,16 @@ import json
 
 import pytest
 
-from .conftest import DOCS, PERFIL_COMO_A, ejecutar_cli, escribir_export, leer_json, leer_jsonl
+from .conftest import (
+    DOCS,
+    EXPORTADO_DE_A,
+    PERFIL_COMO_A,
+    RAIZ,
+    ejecutar_cli,
+    escribir_export,
+    leer_json,
+    leer_jsonl,
+)
 
 REGISTRO_VALIDO = {
     "id": 1,
@@ -143,6 +152,124 @@ def test_REQ_NOR_018_un_perfil_no_valido_para_la_carga_con_archivo_y_campo(
     assert resultado.returncode == 1
     assert "prueba.yaml" in resultado.stderr
     assert "zona_horaria" in resultado.stderr
+    assert not salida.exists()
+
+
+def test_REQ_NOR_003_un_identificador_repetido_en_el_export_va_a_cuarentena(
+    tmp_path, config_de_prueba
+):
+    config = config_de_prueba("prueba", PERFIL_COMO_A.format(source="prueba"))
+    repetido = {**REGISTRO_VALIDO, "id": "1", "nombre_completo": "Otra Persona"}
+    entrada = escribir_export(tmp_path / "export.json", [REGISTRO_VALIDO, repetido])
+    salida = tmp_path / "salida"
+
+    resultado = normalizar(config, "prueba", entrada, salida)
+
+    assert resultado.returncode == 0, resultado.stderr
+    assert [lead["lead_id"] for lead in leer_jsonl(salida / "leads.jsonl")] == ["prueba:1"]
+    assert leer_jsonl(salida / "cuarentena.jsonl") == [
+        {"indice": 1, "lead_id": "prueba:1", "motivo": "identificador_repetido"}
+    ]
+
+
+def test_REQ_NOR_015_el_mapeo_explicito_del_perfil_llega_al_informe_y_a_los_leads(
+    tmp_path, config_de_prueba
+):
+    perfil = PERFIL_COMO_A.format(source="prueba") + "mapeo:\n  country: pais\n"
+    config = config_de_prueba("prueba", perfil)
+    entrada = escribir_export(tmp_path / "export.json", [REGISTRO_VALIDO])
+    salida = tmp_path / "salida"
+
+    resultado = normalizar(config, "prueba", entrada, salida)
+
+    assert resultado.returncode == 0, resultado.stderr
+    mapeo = leer_json(salida / "informe.json")["mapeo"]["country"]
+    assert (mapeo["ruta"], mapeo["origen"], mapeo["aviso"]) == ("pais", "perfil", None)
+    assert leer_jsonl(salida / "leads.jsonl")[0]["country"] == "ES"
+
+
+def test_REQ_NOR_018_un_mapeo_explicito_a_una_ruta_que_el_export_no_trae_para_la_carga(
+    tmp_path, config_de_prueba
+):
+    perfil = PERFIL_COMO_A.format(source="prueba") + "mapeo:\n  email: contacto.correo\n"
+    config = config_de_prueba("prueba", perfil)
+    entrada = escribir_export(tmp_path / "export.json", [REGISTRO_VALIDO])
+    salida = tmp_path / "salida"
+
+    resultado = normalizar(config, "prueba", entrada, salida)
+
+    assert resultado.returncode == 1
+    assert "contacto.correo" in resultado.stderr and "email" in resultado.stderr
+    assert "Traceback" not in resultado.stderr
+    assert not salida.exists()
+
+
+def test_REQ_NOR_002_un_texto_con_un_surrogate_suelto_no_tumba_la_carga(tmp_path, config_de_prueba):
+    config = config_de_prueba("prueba", PERFIL_COMO_A.format(source="prueba"))
+    registro = {**REGISTRO_VALIDO, "mensaje": "Hola \ud83d quiero una cita de traumatología."}
+    entrada = tmp_path / "export.json"
+    export = {"exportado": EXPORTADO_DE_A, "registros": [registro]}
+    entrada.write_text(json.dumps(export), encoding="utf-8")  # JSON válido: surrogate escapado
+    salida = tmp_path / "salida"
+
+    resultado = normalizar(config, "prueba", entrada, salida)
+
+    assert resultado.returncode == 0, resultado.stderr
+    leads = leer_jsonl(salida / "leads.jsonl")
+    assert "quiero una cita" in leads[0]["enquiry_text"]
+    assert not list(salida.glob("*.tmp"))
+
+
+def test_REQ_NOR_002_una_salida_que_es_un_archivo_para_la_carga_sin_traceback(
+    tmp_path, config_de_prueba
+):
+    config = config_de_prueba("prueba", PERFIL_COMO_A.format(source="prueba"))
+    entrada = escribir_export(tmp_path / "export.json", [REGISTRO_VALIDO])
+    salida = tmp_path / "salida"
+    salida.write_text("ocupado", encoding="utf-8")
+
+    resultado = normalizar(config, "prueba", entrada, salida)
+
+    assert resultado.returncode == 1
+    assert "salida" in resultado.stderr
+    assert "Traceback" not in resultado.stderr
+
+
+def test_REQ_NOR_029_un_historico_que_no_se_puede_escribir_para_la_carga_antes_de_escribir(
+    tmp_path, config_de_prueba
+):
+    config = config_de_prueba("prueba", PERFIL_COMO_A.format(source="prueba"))
+    entrada = escribir_export(tmp_path / "export.json", [REGISTRO_VALIDO])
+    salida = tmp_path / "salida"
+    bloqueo = tmp_path / "bloqueo"
+    bloqueo.write_text("un archivo donde debería ir una carpeta", encoding="utf-8")
+
+    resultado = ejecutar_cli(
+        "--config", str(config), "--clinica", "prueba", "--entrada", str(entrada),
+        "--salida", str(salida), "--historico", str(bloqueo / "historico.jsonl"),
+    )  # fmt: skip
+
+    assert resultado.returncode == 1
+    assert "historico.jsonl" in resultado.stderr
+    assert "Traceback" not in resultado.stderr
+    assert not salida.exists()
+
+
+def test_extractor_claude_sin_clave_para_la_carga_sin_escribir_nada(tmp_path, config_de_prueba):
+    """Sin ANTHROPIC_* en el entorno y sin .env en el cwd: la CLI no puede extraer con Claude."""
+    config = config_de_prueba("prueba", PERFIL_COMO_A.format(source="prueba"))
+    entrada = escribir_export(tmp_path / "export.json", [REGISTRO_VALIDO])
+    salida = tmp_path / "salida"
+
+    resultado = ejecutar_cli(
+        "--config", str(config), "--clinica", "prueba", "--entrada", str(entrada),
+        "--salida", str(salida), "--extractor", "claude",
+        "--prompt", str(RAIZ / "prompts" / "extraccion-lead" / "v1.md"),
+        cwd=tmp_path,
+    )  # fmt: skip
+
+    assert resultado.returncode == 1
+    assert "Traceback" not in resultado.stderr
     assert not salida.exists()
 
 

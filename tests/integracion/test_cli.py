@@ -32,6 +32,7 @@ def normalizar(
 ) -> subprocess.CompletedProcess:
     comando = [sys.executable, "-m", "normalizador", "--clinica", clinica]
     comando += ["--entrada", str(entrada), "--salida", str(salida)]
+    comando += ["--historico", str(salida.parent / "historico.jsonl")]  # nunca el de datos/
     return subprocess.run(
         comando, capture_output=True, text=True, cwd=RAIZ, check=False, timeout=60
     )

@@ -28,8 +28,12 @@ class HistoricoJsonl:
         self.ruta = ruta
 
     def cargas(self) -> tuple[CargaEnHistorico, ...]:
-        if not self.ruta.exists():
-            return ()
+        """Las cargas anotadas; antes comprueba que el histórico se podrá escribir al terminar."""
+        try:
+            self.ruta.parent.mkdir(parents=True, exist_ok=True)
+            self.ruta.touch(exist_ok=True)
+        except OSError as error:
+            raise HistoricoIlegible(self.ruta, f"no se puede escribir: {error.strerror}") from error
         lineas = self.ruta.read_text(encoding="utf-8").splitlines()
         return tuple(
             _carga(self.ruta, numero, linea)

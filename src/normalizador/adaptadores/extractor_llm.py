@@ -10,6 +10,7 @@ del SDK: ante una negativa, el respaldo es el diccionario.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import pathlib
 import re
@@ -22,10 +23,12 @@ import yaml
 
 from normalizador.aplicacion.puertos import Extractor
 from normalizador.dominio.avisos import Aviso, esta_ausente
+from normalizador.dominio.calidad import CAMPO_EXTRACCION
 from normalizador.dominio.enmascarado import ReglasDeEnmascarado, enmascarar
 from normalizador.dominio.extraccion import (
     ALTA,
     BAJA,
+    CODIGO_DE_IDIOMA,
     MEDIA,
     SIN_TEXTO,
     ExtraccionDelTexto,
@@ -34,13 +37,19 @@ from normalizador.dominio.extraccion import (
 
 logger = logging.getLogger("normalizador")
 
-CAMPO_EXTRACCION = "extraccion"
 EXTRACCION_RESPALDO = "extraccion_respaldo"
 HUECO_DEL_MENSAJE = "{{entrada}}"
-CODIGO_DE_IDIOMA = re.compile(r"[a-z]{2}")
 CABECERA = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 SECCION = re.compile(r"^## (.+?)\n(.*?)(?=^## |\Z)", re.DOTALL | re.MULTILINE)
 URGENCIAS = (ALTA, MEDIA, BAJA)
+LONGITUD_DE_LA_HUELLA = 16
+# Clave, permisos o modelo mal configurados: no es un fallo pasajero y la carga tiene que parar.
+ERRORES_QUE_PARAN_LA_CARGA = (
+    anthropic.AuthenticationError,
+    anthropic.PermissionDeniedError,
+    anthropic.NotFoundError,
+    anthropic.BadRequestError,
+)
 
 
 class ClienteDeMensajes(Protocol):
@@ -60,10 +69,13 @@ class Prompt:
     estado: str
     sistema: str
     usuario: str
+    nombre: str = ""  # `extraccion-lead/v1`: la versión que queda en el informe
+    huella: str = ""  # del texto del prompt, para distinguir cargas en el histórico
 
     @classmethod
     def desde_archivo(cls, ruta: pathlib.Path) -> Prompt:
-        partes = CABECERA.match(ruta.read_text(encoding="utf-8"))
+        texto = ruta.read_text(encoding="utf-8")
+        partes = CABECERA.match(texto)
         if partes is None:
             raise ValueError(f"{ruta}: el prompt necesita una cabecera YAML entre líneas `---`.")
         cabecera = yaml.safe_load(partes.group(1)) or {}
@@ -84,6 +96,8 @@ class Prompt:
             estado=str(cabecera.get("estado", "borrador")),
             sistema=secciones["Sistema"],
             usuario=secciones["Usuario"],
+            nombre=f"{ruta.resolve().parent.name}/{ruta.stem}",
+            huella=hashlib.sha256(texto.encode("utf-8")).hexdigest()[:LONGITUD_DE_LA_HUELLA],
         )
 
     def mensaje(self, entrada: str) -> str:
@@ -120,6 +134,8 @@ class ExtractorConClaude:
                 output_format=self.salida,
             )
             return self._validar(respuesta)
+        except ERRORES_QUE_PARAN_LA_CARGA:
+            raise
         except (anthropic.AnthropicError, pydantic.ValidationError, ValueError) as error:
             datos = {"motivo": type(error).__name__}
             logger.info("extraccion con respaldo", extra={"datos": datos})

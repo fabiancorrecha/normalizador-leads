@@ -8,6 +8,7 @@ import pathlib
 from dataclasses import dataclass, field
 
 import anthropic
+import httpx2
 import pytest
 import yaml
 
@@ -77,6 +78,12 @@ def extractor(respuesta):
     return ExtractorConClaude(cliente, PROMPT, EXTRACCION, ENMASCARADO, RESPALDO), cliente
 
 
+def error_de_la_api(tipo, codigo):
+    """Un error HTTP del SDK tal como lo construye él: con su respuesta y su código."""
+    peticion = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    return tipo("simulado", response=httpx2.Response(codigo, request=peticion), body=None)
+
+
 def test_REQ_NOR_024_la_salida_valida_del_modelo_es_la_extraccion():
     sujeto, cliente = extractor(Respuesta(Salida("traumatología", "alta", True, "es")))
 
@@ -110,6 +117,8 @@ def test_REQ_NOR_024_la_llamada_lleva_el_modelo_del_prompt_y_pide_salida_estruct
         Respuesta(Salida("traumatología", "alta", True, "es"), stop_reason="max_tokens"),
         anthropic.AnthropicError("timeout simulado"),
         anthropic.AnthropicError("conexión simulada"),
+        error_de_la_api(anthropic.RateLimitError, 429),
+        error_de_la_api(anthropic.InternalServerError, 500),
         ValueError("salida que no valida"),
     ],
 )
@@ -122,6 +131,23 @@ def test_REQ_NOR_024_si_el_modelo_falla_o_no_vale_se_usa_el_diccionario_con_avis
     assert (extraccion.specialty, extraccion.urgency) == ("traumatología", "alta")
     assert (extraccion.has_reports, extraccion.language) == (True, "es")
     assert extraccion.avisos == del_diccionario.avisos + (Aviso("extraccion", EXTRACCION_RESPALDO),)
+
+
+@pytest.mark.parametrize(
+    ("tipo", "codigo"),
+    [
+        (anthropic.AuthenticationError, 401),
+        (anthropic.PermissionDeniedError, 403),
+        (anthropic.NotFoundError, 404),  # un --modelo que no existe
+        (anthropic.BadRequestError, 400),
+    ],
+)
+def test_REQ_NOR_024_una_clave_o_un_modelo_mal_configurados_paran_la_carga(tipo, codigo):
+    """No es un fallo pasajero: degradar lead a lead al diccionario lo escondería."""
+    sujeto, _ = extractor(error_de_la_api(tipo, codigo))
+
+    with pytest.raises(tipo):
+        sujeto.extraer(TEXTO_DEL_4417)
 
 
 def test_REQ_NOR_026_el_texto_enviado_va_enmascarado_y_delimitado_como_dato():
@@ -163,6 +189,8 @@ def test_REQ_NOR_023_sin_texto_no_se_llama_al_modelo(texto):
 def test_REQ_NOR_024_el_prompt_v1_tiene_la_cabecera_del_kit_y_el_catalogo_completo():
     assert PROMPT.estado == "borrador"
     assert PROMPT.fallbacks == "default"
+    assert PROMPT.nombre == "extraccion-lead/v1"
+    assert len(PROMPT.huella) == 16
     assert "{{entrada}}" in PROMPT.usuario
     assert all(especialidad in PROMPT.sistema for especialidad in EXTRACCION.especialidades)
 

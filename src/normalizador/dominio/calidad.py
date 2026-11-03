@@ -12,12 +12,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, fields
 
 from normalizador.dominio.lead import Lead
+from normalizador.dominio.mapeo import SEPARADOR_DE_COMPOSICION, SEPARADOR_DE_RUTA
 
 CAMPO_EXTRACCION = "extraccion"  # avisos que no son de un campo del esquema (`extraccion_respaldo`)
 CAMPOS_DE_CALIDAD = (*(campo.name for campo in fields(Lead)), CAMPO_EXTRACCION)
 CAMPOS_DE_CONTACTO = ("email", "phone")
-SEPARADOR_DE_COMPOSICION = "+"
-SEPARADOR_DE_RUTA = "."
 DECIMALES = 1
 
 

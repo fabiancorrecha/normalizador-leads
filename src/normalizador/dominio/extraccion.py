@@ -14,6 +14,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from normalizador.dominio.avisos import Aviso, esta_ausente
+from normalizador.dominio.identidad import sin_tildes
 from normalizador.dominio.lead import Urgencia
 
 ALTA: Urgencia = "alta"
@@ -177,9 +178,7 @@ class ExtractorPorDiccionario:
 
 def normalizar(texto: str) -> str:
     """Minúsculas, sin tildes y con la puntuación (guiones y apóstrofos incluidos) como espacios."""
-    descompuesto = unicodedata.normalize("NFKD", texto)
-    sin_tildes = "".join(letra for letra in descompuesto if not unicodedata.combining(letra))
-    return " ".join(NO_ES_LETRA_NI_DIGITO.sub(" ", sin_tildes.casefold()).split())
+    return " ".join(NO_ES_LETRA_NI_DIGITO.sub(" ", sin_tildes(texto).casefold()).split())
 
 
 def _coincide(senal: str, texto: str, palabras: Sequence[str]) -> bool:

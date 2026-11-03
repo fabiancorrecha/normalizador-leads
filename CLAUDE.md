@@ -11,7 +11,8 @@ Lee esto completo antes de cualquier tarea. Estas reglas tienen prioridad sobre 
   sale normalizado o en cuarentena con motivo (0 perdidos). Lo comprueban los tests de `make check`.
 - Riesgo principal: **un lead perdido o mal normalizado en silencio**. Los otros dos son la fuga de datos
   de salud y la extracción con IA manipulada. Riesgos y controles, siempre en contexto: @docs/riesgos.md
-- Fase actual: 1, «Normalizar A y B solo con configuración» (`specs/001-normalizar-por-configuracion/`).
+- Fase actual: 1, «Normalizar A y B solo con configuración» (`specs/001-normalizar-por-configuracion/`),
+  con sus ocho tareas terminadas; las fases 2 y 3 están descritas en la spec y aún sin spec propia.
 
 ## Reglas no negociables
 1. Ningún registro se pierde ni se adivina: cada registro sale normalizado o en cuarentena con motivo, y un
@@ -75,11 +76,11 @@ Lee esto completo antes de cualquier tarea. Estas reglas tienen prioridad sobre 
 - Comandos por etapa: `/descubrir` `/adr` `/diagrama` `/implementar` `/cierre` `/lanzamiento` `/incidente`
 - Entorno: `.venv/` (`python3 -m venv .venv` y `.venv/bin/python -m pip install -r requirements-dev.txt`,
   que crea T-001-1). El Makefile usa `.venv/` aunque no esté activado.
-- Normalizar un export (lo crea T-001-1 y lo completa T-001-4):
+- Normalizar un export:
   `.venv/bin/python -m normalizador --clinica clinica_a --entrada docs/clinica_a_leads.json --salida salida/clinica_a`
+  (`--extractor claude` usa el modelo y cuesta dinero: solo con permiso; `--historico` cambia el histórico).
 
 ## Mapa del código
-Lo crea T-001-1 y lo completan T-001-2 a T-001-8:
 - `src/normalizador/dominio/` — esquema común, avisos, normalizadores (fechas, contacto, identidad),
   diccionario, reranking del mapeo, extracción por diccionario, enmascarado y calidad (puro, sin E/S)
 - `src/normalizador/aplicacion/` — pipeline ETL con cuarentena, informe y puertos (`Protocol`)

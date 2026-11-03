@@ -29,10 +29,25 @@ class EscritorDeArchivos:
 
 
 def _jsonl(filas: Iterable[dict[str, object]]) -> str:
-    return "".join(json.dumps(fila, ensure_ascii=False) + "\n" for fila in filas)
+    return "".join(_json(fila) + "\n" for fila in filas)
+
+
+def _json(fila: dict[str, object]) -> str:
+    """UTF-8 legible. Si un texto trae un surrogate suelto (un emoji roto en el CRM), esa fila va
+    con escapes ASCII: es el mismo valor en JSON y la carga no se pierde."""
+    texto = json.dumps(fila, ensure_ascii=False)
+    try:
+        texto.encode("utf-8")
+    except UnicodeEncodeError:
+        return json.dumps(fila, ensure_ascii=True)
+    return texto
 
 
 def _escribir(ruta: pathlib.Path, texto: str) -> None:
     temporal = ruta.with_name(ruta.name + ".tmp")
-    temporal.write_text(texto, encoding="utf-8")
-    os.replace(temporal, ruta)
+    try:
+        temporal.write_text(texto, encoding="utf-8")
+        os.replace(temporal, ruta)
+    except BaseException:
+        temporal.unlink(missing_ok=True)  # nada a medias en la carpeta de salida
+        raise

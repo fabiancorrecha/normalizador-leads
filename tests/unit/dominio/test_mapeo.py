@@ -196,6 +196,19 @@ def test_REQ_NOR_015_el_mapeo_explicito_del_perfil_manda_sobre_el_reranking():
     assert mapeo.campos["enquiry_text"].candidatos[0].ruta == "mensaje"  # el informe lo conserva
 
 
+def test_REQ_NOR_015_un_mapeo_explicito_a_una_ruta_sin_datos_queda_avisado():
+    mapeo = proponer_mapeo(
+        registros_de("clinica_a"),
+        DICCIONARIO,
+        VALIDADORES_DE_A,
+        mapeo_explicito={"email": "contacto.correo", "full_name": "nombre+apellidos"},
+    )
+
+    assert mapeo.campos["email"].aviso == "mapeo_explicito_sin_datos"
+    assert mapeo.campos["full_name"].aviso == "mapeo_explicito_sin_datos"
+    assert mapeo.campos["phone"].aviso is None
+
+
 def test_REQ_NOR_015_los_demas_campos_siguen_saliendo_del_reranking():
     mapeo = proponer_mapeo(
         registros_de("clinica_a"),

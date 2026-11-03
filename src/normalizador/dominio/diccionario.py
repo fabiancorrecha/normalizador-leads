@@ -22,7 +22,7 @@ from normalizador.dominio.identidad import (
     normalizar_pais,
 )
 
-# Campos del esquema que salen del export; los demás se extraen del texto (T-001-6) o se derivan.
+# Campos del esquema que salen del export; los demás se extraen del texto o se derivan.
 CAMPOS_MAPEABLES = (
     "lead_id",
     "full_name",
@@ -75,8 +75,8 @@ class Diccionario:
     margen: float
     paises: AliasDePaises
     meses: Mapping[str, int] = field(default_factory=dict)
-    # Secciones de otros módulos, que las validan ellos: `extraccion` (dominio/extraccion.py,
-    # T-001-6) y `enmascarado` (dominio/enmascarado.py, T-001-7).
+    # Secciones de otros módulos, que las validan ellos: `extraccion` (dominio/extraccion.py) y
+    # `enmascarado` (dominio/enmascarado.py).
     extraccion: Mapping[str, object] = field(default_factory=dict)
     enmascarado: Mapping[str, object] = field(default_factory=dict)
 
@@ -126,7 +126,13 @@ def validadores(reglas: ReglasDeLaClinica) -> Mapping[str, Validador]:
 
     def es_fecha(valor: object) -> bool:
         leida = leer_fecha(valor, reglas.lectura)
-        return leida.valor is not None and reglas.rango.admite(leida.valor, reglas.lectura.zona)
+        if leida.valor is None:
+            return False
+        # Un entero solo cuenta como fecha dentro del rango: con `epoch_s`, cualquier id lo
+        # parecería. Una fecha escrita se reconoce aunque sea antigua: el rango la avisa después.
+        if isinstance(valor, int) and not isinstance(valor, bool):
+            return reglas.rango.admite(leida.valor, reglas.lectura.zona)
+        return True
 
     def es_pais(valor: object) -> bool:
         return normalizar_pais(valor, reglas.paises).valor is not None

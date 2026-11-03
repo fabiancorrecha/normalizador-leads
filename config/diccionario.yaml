@@ -9,7 +9,7 @@ version: 1
 #   contenido: % de valores presentes que pasan el validador del campo.
 # Un campo se mapea si el mejor candidato llega al umbral y saca al segundo al menos el margen; si no,
 # queda sin mapear con `mapeo_dudoso` y el perfil puede fijarlo (REQ-NOR-014 y 015).
-# Pesos, umbral y margen son supuestos iniciales: calibrar con el histórico de calidad (T-001-8).
+# Pesos, umbral y margen son supuestos iniciales: calibrar con el bloque `historico` del informe.
 mapeo:
   peso_nombre: 0.5
   peso_contenido: 0.5
@@ -20,8 +20,9 @@ mapeo:
 campos:
   lead_id:
     validador: identificador
+    # `numero`/`number` no van aquí: son sinónimos de phone y empatarían con id (mapeo_dudoso).
     sinonimos: [id, ref, referencia, reference, identificador, identifier, lead_id, codigo, code,
-                numero, number, nr, external_id, record_id, id_lead, id_paciente, patient_id, uid]
+                nr, external_id, record_id, id_lead, id_paciente, patient_id, uid]
   full_name:
     validador: nombre
     sinonimos: [nombre_completo, nombre_y_apellidos, full_name, fullname, name, paciente, patient,

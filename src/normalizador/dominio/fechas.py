@@ -95,9 +95,9 @@ def leer_fecha(
 ) -> Normalizado[datetime]:
     """El instante (en UTC) que representa `valor`, sin mirar el rango.
 
-    También lee la fecha del export (T-001-4). Como validador de contenido al mapear (T-001-3) hay
-    que exigir además el rango plausible: con `epoch_s` declarado, cualquier entero es una fecha
-    (el id 4417 sería un instante de 1970).
+    También lee la fecha del export. Como validador de contenido al mapear hay que exigir además
+    el rango plausible a los enteros: con `epoch_s` declarado, cualquier id sería una fecha (el
+    4417 sería un instante de 1970).
     """
     if esta_ausente(valor):
         return Normalizado.ausente(campo)

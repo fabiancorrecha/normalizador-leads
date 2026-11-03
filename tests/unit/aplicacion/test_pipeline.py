@@ -1,5 +1,6 @@
 """El pipeline con puertos falsos: destinos, informe y referencia (REQ-NOR-002 y 003)."""
 
+import dataclasses
 import pathlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -8,8 +9,9 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from normalizador.adaptadores.configuracion import cargar_diccionario
-from normalizador.aplicacion.pipeline import ExtractorNulo, Pipeline, ResultadoDeCarga
+from normalizador.aplicacion.pipeline import Pipeline, RegistroEnCuarentena, ResultadoDeCarga
 from normalizador.aplicacion.puertos import ExportIlegible
+from normalizador.dominio.extraccion import SIN_TEXTO
 from normalizador.dominio.fechas import LecturaDeFechas
 from normalizador.dominio.mapeo import LecturaDelExportado, PerfilDeClinica
 
@@ -60,7 +62,14 @@ class RelojFijo:
         return datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
 
 
-def pipeline(export, perfil=PERFIL, escritor=None):
+class ExtractorNulo:
+    """Un extractor que no extrae nada: el pipeline se prueba sin diccionario ni modelo."""
+
+    def extraer(self, texto):
+        return SIN_TEXTO
+
+
+def pipeline(export, perfil=PERFIL, escritor=None, extraccion=None):
     return Pipeline(
         DICCIONARIO,
         perfil,
@@ -68,6 +77,8 @@ def pipeline(export, perfil=PERFIL, escritor=None):
         escritor or EscritorFalso(),
         ExtractorNulo(),
         RelojFijo(),
+        None,
+        extraccion,
     )
 
 
@@ -84,6 +95,38 @@ def test_REQ_NOR_002_cada_registro_acaba_en_leads_o_en_cuarentena():
         (2, "sin_identificador"),
     ]
     assert resultado.registros_de_entrada == len(resultado.leads) + len(resultado.cuarentena)
+
+
+def test_REQ_NOR_003_un_identificador_repetido_va_a_cuarentena_con_su_lead_id():
+    repetido = {**REGISTRO, "id": "1", "contacto": {"email": "otra@example.com"}}
+    export = {"exportado": EXPORTADO, "registros": [REGISTRO, repetido]}
+
+    resultado = pipeline(export).ejecutar(ENTRADA, SALIDA)
+
+    assert [lead.lead_id for lead in resultado.leads] == ["prueba:1"]
+    assert resultado.cuarentena == (RegistroEnCuarentena(1, "prueba:1", "identificador_repetido"),)
+    assert resultado.informe()["cuarentena_por_motivo"] == {"identificador_repetido": 1}
+
+
+def test_REQ_NOR_018_un_mapeo_explicito_a_una_ruta_que_el_export_no_trae_para_la_carga():
+    perfil = dataclasses.replace(PERFIL, mapeo_explicito={"email": "contacto.correo"})
+    escritor = EscritorFalso()
+    export = {"exportado": EXPORTADO, "registros": [REGISTRO]}
+
+    with pytest.raises(ExportIlegible) as error:
+        pipeline(export, perfil=perfil, escritor=escritor).ejecutar(ENTRADA, SALIDA)
+
+    assert "email" in str(error.value) and "contacto.correo" in str(error.value)
+    assert escritor.escrito == []
+
+
+def test_el_informe_dice_con_que_extractor_salio_la_carga():
+    descripcion = {"extractor": "diccionario", "modelo": None, "prompt": None}
+    export = {"exportado": EXPORTADO, "registros": [REGISTRO]}
+
+    informe = pipeline(export, extraccion=descripcion).ejecutar(ENTRADA, SALIDA).informe()
+
+    assert informe["extraccion"] == descripcion
 
 
 def test_REQ_NOR_002_el_informe_cuadra_y_lleva_el_mapeo_y_los_avisos():

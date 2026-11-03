@@ -114,8 +114,12 @@ def _es_region(texto: str) -> bool:
     return texto.strip().upper() in phonenumbers.SUPPORTED_REGIONS
 
 
+def sin_tildes(texto: str) -> str:
+    """Quita los acentos y otras marcas (NFKD): «Líbano» → «Libano»."""
+    descompuesto = unicodedata.normalize("NFKD", texto)
+    return "".join(letra for letra in descompuesto if not unicodedata.combining(letra))
+
+
 def _clave(nombre: str) -> str:
     """Minúsculas, sin tildes y con un solo espacio: «  Líbano » y «LIBANO» son la misma clave."""
-    descompuesto = unicodedata.normalize("NFKD", nombre)
-    sin_tildes = "".join(letra for letra in descompuesto if not unicodedata.combining(letra))
-    return " ".join(sin_tildes.casefold().split())
+    return " ".join(sin_tildes(nombre).casefold().split())

@@ -9,6 +9,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -18,16 +19,21 @@ CONFIG = RAIZ / "config"
 EXPORTADO_DE_A = "27/10/2026 08:14"
 
 
-def ejecutar_cli(*argumentos: str) -> subprocess.CompletedProcess:
-    """La CLI en un proceso aparte, sin las variables ANTHROPIC_* de quien desarrolla (REC-016)."""
+def ejecutar_cli(*argumentos: str, cwd: pathlib.Path = RAIZ) -> subprocess.CompletedProcess:
+    """La CLI en un proceso aparte, sin las variables ANTHROPIC_* de quien desarrolla (REC-016) y
+    con un histórico temporal si el test no trae el suyo: los tests nunca tocan datos/."""
     entorno = {
         clave: valor for clave, valor in os.environ.items() if not clave.startswith("ANTHROPIC")
     }
+    lista = list(argumentos)
+    if "--historico" not in lista:
+        temporal = pathlib.Path(tempfile.mkdtemp(prefix="historico-"))
+        lista += ["--historico", str(temporal / "historico.jsonl")]
     return subprocess.run(
-        [sys.executable, "-m", "normalizador", *argumentos],
+        [sys.executable, "-m", "normalizador", *lista],
         capture_output=True,
         text=True,
-        cwd=RAIZ,
+        cwd=cwd,
         env=entorno,
         check=False,
         timeout=60,

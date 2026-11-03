@@ -2,6 +2,7 @@
 
 import json
 import logging
+import pathlib
 
 from normalizador.cli import main
 
@@ -27,7 +28,9 @@ def texto_de_los_logs(caplog) -> str:
 
 
 def normalizar(config, clinica, entrada, salida) -> int:
+    historico = pathlib.Path(salida).parent / "historico.jsonl"  # nunca el de datos/
     argumentos = ["--clinica", clinica, "--entrada", str(entrada), "--salida", str(salida)]
+    argumentos += ["--historico", str(historico)]
     if config is not None:
         argumentos = ["--config", str(config), *argumentos]
     return main(argumentos)

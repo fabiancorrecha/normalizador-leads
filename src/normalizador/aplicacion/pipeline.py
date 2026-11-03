@@ -11,7 +11,7 @@ import logging
 import pathlib
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 
 from normalizador.aplicacion.informe import bloque_de_calidad, bloque_de_historico
@@ -27,7 +27,7 @@ from normalizador.dominio.avisos import Aviso, esta_ausente
 from normalizador.dominio.calidad import CalidadDeCampo, CargaEnHistorico, calidad_por_campo
 from normalizador.dominio.contacto import normalizar_email, normalizar_telefono
 from normalizador.dominio.diccionario import Diccionario, ReglasDeLaClinica, validadores
-from normalizador.dominio.extraccion import SIN_TEXTO, ExtraccionDelTexto
+from normalizador.dominio.extraccion import SIN_TEXTO
 from normalizador.dominio.fechas import RangoPlausible, leer_fecha, normalizar_fecha
 from normalizador.dominio.identidad import (
     construir_lead_id,
@@ -37,6 +37,8 @@ from normalizador.dominio.identidad import (
 )
 from normalizador.dominio.lead import Lead
 from normalizador.dominio.mapeo import (
+    MAPEO_EXPLICITO_SIN_DATOS,
+    SEPARADOR_DE_RUTA,
     Mapeo,
     PerfilDeClinica,
     aplanar,
@@ -48,7 +50,7 @@ logger = logging.getLogger("normalizador")
 
 REGISTRO_NO_VALIDO = "registro_no_valido"
 SIN_IDENTIFICADOR = "sin_identificador"
-SEPARADOR_DE_RUTA = "."
+IDENTIFICADOR_REPETIDO = "identificador_repetido"
 
 
 @dataclass(frozen=True)
@@ -76,10 +78,11 @@ class ResultadoDeCarga:
     leads: tuple[Lead, ...]
     cuarentena: tuple[RegistroEnCuarentena, ...]
     avisos: tuple[AvisoDeLead, ...]
-    huella: str | None = None  # del export, el perfil y el diccionario (REQ-NOR-030)
+    huella: str | None = None  # del export, el perfil, el diccionario y el extractor (REQ-NOR-030)
     rutas_del_export: tuple[str, ...] = ()
     anteriores: tuple[CargaEnHistorico, ...] = ()
     anotada: bool | None = None  # None sin histórico; False si la huella ya estaba
+    extraccion: Mapping[str, object] = field(default_factory=dict)  # extractor, modelo y prompt
 
     def informe(self) -> dict[str, object]:
         """El informe de la carga: recuentos, mapeo, avisos, calidad e histórico; nunca valores."""
@@ -90,6 +93,7 @@ class ResultadoDeCarga:
             "perfil": self.perfil,
             "entrada": self.entrada,
             "huella": self.huella,
+            "extraccion": dict(self.extraccion),
             "referencia": _iso_utc(self.referencia),
             "registros_de_entrada": self.registros_de_entrada,
             "leads_normalizados": len(self.leads),
@@ -128,13 +132,6 @@ class ResultadoDeCarga:
         )
 
 
-class ExtractorNulo:
-    """Un extractor que no extrae nada: para los tests del pipeline y para cargar sin extracción."""
-
-    def extraer(self, texto: str | None) -> ExtraccionDelTexto:
-        return SIN_TEXTO
-
-
 class Pipeline:
     def __init__(
         self,
@@ -145,6 +142,7 @@ class Pipeline:
         extractor: Extractor,
         reloj: Reloj,
         historico: Historico | None = None,
+        extraccion: Mapping[str, object] | None = None,
     ) -> None:
         self.diccionario = diccionario
         self.perfil = perfil
@@ -153,6 +151,7 @@ class Pipeline:
         self.extractor = extractor
         self.reloj = reloj
         self.historico = historico
+        self.descripcion_de_la_extraccion = dict(extraccion or {})
 
     def ejecutar(
         self, entrada: pathlib.Path, salida: pathlib.Path, huella: str | None = None
@@ -166,9 +165,11 @@ class Pipeline:
         mapeo = proponer_mapeo(
             registros, self.diccionario, comprobadores, self.perfil.mapeo_explicito
         )
+        _exigir_mapeo_explicito_con_datos(mapeo, entrada)
         leads: list[Lead] = []
         cuarentena: list[RegistroEnCuarentena] = []
         avisos: list[AvisoDeLead] = []
+        vistos: set[str] = set()
         for indice, registro in enumerate(registros):
             if not isinstance(registro, Mapping):
                 cuarentena.append(self._aislar(indice, REGISTRO_NO_VALIDO))
@@ -178,6 +179,10 @@ class Pipeline:
             if identidad.valor is None:
                 cuarentena.append(self._aislar(indice, SIN_IDENTIFICADOR))
                 continue
+            if identidad.valor in vistos:  # el lead_id es único: el segundo no pisa al primero
+                cuarentena.append(self._aislar(indice, IDENTIFICADOR_REPETIDO, identidad.valor))
+                continue
+            vistos.add(identidad.valor)
             lead, avisos_del_lead = self._normalizar(identidad.valor, valores, reglas)
             leads.append(lead)
             avisos.extend(
@@ -198,6 +203,7 @@ class Pipeline:
             rutas_del_export=_rutas(registros),
             anteriores=anteriores,
             anotada=anotada,
+            extraccion=self.descripcion_de_la_extraccion,
         )
         self.escritor.escribir(salida, resultado)
         if anotada:  # después de escribir: una carga a medias no entra en el histórico
@@ -251,10 +257,12 @@ class Pipeline:
         }
         logger.info("lead normalizado", extra={"datos": datos})
 
-    def _aislar(self, indice: int, motivo: str) -> RegistroEnCuarentena:
+    def _aislar(self, indice: int, motivo: str, lead_id: str | None = None) -> RegistroEnCuarentena:
         datos = {"perfil": self.perfil.source, "indice": indice, "motivo": motivo}
+        if lead_id is not None:
+            datos["lead_id"] = lead_id
         logger.info("registro en cuarentena", extra={"datos": datos})
-        return RegistroEnCuarentena(indice, None, motivo)
+        return RegistroEnCuarentena(indice, lead_id, motivo)
 
     def _normalizar(
         self,
@@ -295,6 +303,15 @@ class Pipeline:
             + extraccion.avisos
         )
         return lead, avisos
+
+
+def _exigir_mapeo_explicito_con_datos(mapeo: Mapeo, entrada: pathlib.Path) -> None:
+    """Un perfil que mapea a una ruta que el export no trae es un error de contrato, no una
+    columna de nulos: la carga para antes de escribir nada."""
+    sin_datos = [m for m in mapeo.campos.values() if m.aviso == MAPEO_EXPLICITO_SIN_DATOS]
+    if sin_datos:
+        detalle = ", ".join(f"{m.campo} → {m.ruta!r}" for m in sin_datos)
+        raise ExportIlegible(entrada, f"el perfil mapea a rutas que el export no trae: {detalle}")
 
 
 def _registros(export: object, ruta: str, entrada: pathlib.Path) -> list[object]:

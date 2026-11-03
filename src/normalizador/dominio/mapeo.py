@@ -8,7 +8,6 @@ sin mapear con `mapeo_dudoso` (REQ-NOR-014); el perfil puede fijar un mapeo expl
 
 from __future__ import annotations
 
-import unicodedata
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from itertools import product
@@ -16,8 +15,10 @@ from itertools import product
 from normalizador.dominio.avisos import Aviso, esta_ausente
 from normalizador.dominio.diccionario import CampoMapeable, Diccionario, Validador
 from normalizador.dominio.fechas import LecturaDeFechas
+from normalizador.dominio.identidad import sin_tildes
 
 MAPEO_DUDOSO = "mapeo_dudoso"
+MAPEO_EXPLICITO_SIN_DATOS = "mapeo_explicito_sin_datos"  # el perfil mapea a una ruta que no existe
 CAMPO_SIN_MAPEAR = "campo_sin_mapear"
 ORIGEN_RESUELTO_POR_CONTENIDO = "origen_resuelto_por_contenido"
 ORIGEN_RERANKING = "reranking"
@@ -93,13 +94,17 @@ def proponer_mapeo(
 ) -> Mapeo:
     """El mapeo de cada campo del esquema, con todos los candidatos para el informe."""
     planos = [aplanar(registro) for registro in registros if isinstance(registro, Mapping)]
+    rutas = {ruta for plano in planos for ruta in plano}
     explicito = dict(mapeo_explicito or {})
     campos: dict[str, MapeoDeCampo] = {}
     for campo in diccionario.campos:
         candidatos = _candidatos(campo, planos, diccionario, validadores[campo.validador])
         if campo.nombre in explicito:
             ruta = explicito[campo.nombre]
-            campos[campo.nombre] = MapeoDeCampo(campo.nombre, ruta, ORIGEN_PERFIL, candidatos)
+            aviso = None if _existe(ruta, rutas) else MAPEO_EXPLICITO_SIN_DATOS
+            campos[campo.nombre] = MapeoDeCampo(
+                campo.nombre, ruta, ORIGEN_PERFIL, candidatos, aviso
+            )
         else:
             campos[campo.nombre] = _elegir(campo.nombre, candidatos, diccionario)
     return Mapeo(campos)
@@ -212,6 +217,11 @@ def _unir(plano: dict[str, object], partes: tuple[str, ...]) -> str | None:
     return " ".join(texto for texto in textos if texto.strip()) or None
 
 
+def _existe(ruta: str, rutas: set[str]) -> bool:
+    """Una ruta explícita del perfil (o cada parte de su composición) aparece en algún registro."""
+    return all(parte in rutas for parte in ruta.split(SEPARADOR_DE_COMPOSICION))
+
+
 def _valor_del_padre(plano: dict[str, object], ruta: str, validador: Validador) -> object | None:
     if SEPARADOR_DE_RUTA not in ruta:
         return None
@@ -226,6 +236,4 @@ def _segmento(ruta: str) -> str:
 
 def _clave(nombre: str) -> str:
     """Nombres de campo comparables: minúsculas, sin tildes, y `_` o `-` como espacios."""
-    descompuesto = unicodedata.normalize("NFKD", nombre)
-    sin_tildes = "".join(letra for letra in descompuesto if not unicodedata.combining(letra))
-    return " ".join(sin_tildes.casefold().replace("_", " ").replace("-", " ").split())
+    return " ".join(sin_tildes(nombre).casefold().replace("_", " ").replace("-", " ").split())
