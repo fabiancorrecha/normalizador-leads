@@ -6,9 +6,11 @@ Los adaptadores los implementan (archivos, modelo de IA, reloj) y los tests usan
 from __future__ import annotations
 
 import pathlib
+from collections.abc import Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Protocol
 
+from normalizador.dominio.calidad import CargaEnHistorico
 from normalizador.dominio.extraccion import ExtraccionDelTexto
 
 if TYPE_CHECKING:
@@ -39,3 +41,12 @@ class Escritor(Protocol):
 
 class Reloj(Protocol):
     def ahora(self) -> datetime: ...
+
+
+class Historico(Protocol):
+    """El histórico acumulado de cargas, solo con agregados (REQ-NOR-029 y 030)."""
+
+    def cargas(self) -> Sequence[CargaEnHistorico]: ...
+
+    def anotar(self, carga: CargaEnHistorico) -> bool:
+        """Añade la carga; devuelve False, sin añadir nada, si su perfil y su huella ya estaban."""

@@ -14,14 +14,17 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 
+from normalizador.aplicacion.informe import bloque_de_calidad, bloque_de_historico
 from normalizador.aplicacion.puertos import (
     Escritor,
     ExportIlegible,
     Extractor,
+    Historico,
     LectorDeExport,
     Reloj,
 )
 from normalizador.dominio.avisos import Aviso, esta_ausente
+from normalizador.dominio.calidad import CalidadDeCampo, CargaEnHistorico, calidad_por_campo
 from normalizador.dominio.contacto import normalizar_email, normalizar_telefono
 from normalizador.dominio.diccionario import Diccionario, ReglasDeLaClinica, validadores
 from normalizador.dominio.extraccion import SIN_TEXTO, ExtraccionDelTexto
@@ -33,7 +36,13 @@ from normalizador.dominio.identidad import (
     normalizar_pais,
 )
 from normalizador.dominio.lead import Lead
-from normalizador.dominio.mapeo import Mapeo, PerfilDeClinica, proponer_mapeo, valores_de
+from normalizador.dominio.mapeo import (
+    Mapeo,
+    PerfilDeClinica,
+    aplanar,
+    proponer_mapeo,
+    valores_de,
+)
 
 logger = logging.getLogger("normalizador")
 
@@ -67,13 +76,20 @@ class ResultadoDeCarga:
     leads: tuple[Lead, ...]
     cuarentena: tuple[RegistroEnCuarentena, ...]
     avisos: tuple[AvisoDeLead, ...]
+    huella: str | None = None  # del export, el perfil y el diccionario (REQ-NOR-030)
+    rutas_del_export: tuple[str, ...] = ()
+    anteriores: tuple[CargaEnHistorico, ...] = ()
+    anotada: bool | None = None  # None sin histórico; False si la huella ya estaba
 
     def informe(self) -> dict[str, object]:
-        """El informe de la carga: recuentos, mapeo con sus candidatos y avisos; nunca valores."""
+        """El informe de la carga: recuentos, mapeo, avisos, calidad e histórico; nunca valores."""
         motivos = Counter(registro.motivo for registro in self.cuarentena)
+        por_campo = self.calidad_por_campo()
+        rutas_mapeadas = [mapeado.ruta for mapeado in self.mapeo.campos.values()]
         return {
             "perfil": self.perfil,
             "entrada": self.entrada,
+            "huella": self.huella,
             "referencia": _iso_utc(self.referencia),
             "registros_de_entrada": self.registros_de_entrada,
             "leads_normalizados": len(self.leads),
@@ -89,7 +105,27 @@ class ResultadoDeCarga:
                 for campo, mapeado in self.mapeo.campos.items()
             },
             "avisos": [asdict(aviso) for aviso in self.avisos],
+            "calidad": bloque_de_calidad(
+                por_campo, self.leads, self.rutas_del_export, rutas_mapeadas
+            ),
+            "historico": bloque_de_historico(self.perfil, por_campo, self.anteriores, self.anotada),
         }
+
+    def calidad_por_campo(self) -> dict[str, CalidadDeCampo]:
+        avisos = [(aviso.lead_id, aviso.campo, aviso.codigo) for aviso in self.avisos]
+        return calidad_por_campo(len(self.leads), avisos)
+
+    def carga_para_el_historico(self, fecha: datetime) -> CargaEnHistorico:
+        """Lo que queda de esta carga en el histórico: agregados, nunca valores (REQ-NOR-029)."""
+        return CargaEnHistorico(
+            perfil=self.perfil,
+            huella=self.huella or "",
+            fecha=_iso_utc(fecha),
+            registros=self.registros_de_entrada,
+            leads=len(self.leads),
+            cuarentena=len(self.cuarentena),
+            por_campo=self.calidad_por_campo(),
+        )
 
 
 class ExtractorNulo:
@@ -108,6 +144,7 @@ class Pipeline:
         escritor: Escritor,
         extractor: Extractor,
         reloj: Reloj,
+        historico: Historico | None = None,
     ) -> None:
         self.diccionario = diccionario
         self.perfil = perfil
@@ -115,10 +152,15 @@ class Pipeline:
         self.escritor = escritor
         self.extractor = extractor
         self.reloj = reloj
+        self.historico = historico
 
-    def ejecutar(self, entrada: pathlib.Path, salida: pathlib.Path) -> ResultadoDeCarga:
+    def ejecutar(
+        self, entrada: pathlib.Path, salida: pathlib.Path, huella: str | None = None
+    ) -> ResultadoDeCarga:
         export = self.lector.leer(entrada)
         registros = _registros(export, self.perfil.ruta_registros, entrada)
+        anteriores = tuple(self.historico.cargas()) if self.historico is not None else ()
+        anotada = self._anotada(huella, anteriores)
         reglas = self._reglas(export, entrada)
         comprobadores = validadores(reglas)
         mapeo = proponer_mapeo(
@@ -152,8 +194,16 @@ class Pipeline:
             leads=tuple(leads),
             cuarentena=tuple(cuarentena),
             avisos=tuple(avisos),
+            huella=huella,
+            rutas_del_export=_rutas(registros),
+            anteriores=anteriores,
+            anotada=anotada,
         )
         self.escritor.escribir(salida, resultado)
+        if anotada:  # después de escribir: una carga a medias no entra en el histórico
+            self.historico.anotar(resultado.carga_para_el_historico(self.reloj.ahora()))
+            datos = {"perfil": self.perfil.source, "cargas_anteriores": len(anteriores)}
+            logger.info("carga anotada en el historico", extra={"datos": datos})
         recuentos = {
             "perfil": self.perfil.source,
             "registros": len(registros),
@@ -163,6 +213,13 @@ class Pipeline:
         }
         logger.info("carga terminada", extra={"datos": recuentos})
         return resultado
+
+    def _anotada(self, huella: str | None, anteriores: tuple[CargaEnHistorico, ...]) -> bool | None:
+        """Si la carga entrará en el histórico: no sin histórico, ni si su huella ya está."""
+        if self.historico is None or huella is None:
+            return None
+        perfil = self.perfil.source
+        return not any(c.perfil == perfil and c.huella == huella for c in anteriores)
 
     def _reglas(self, export: object, entrada: pathlib.Path) -> ReglasDeLaClinica:
         referencia = self._referencia(export, entrada)
@@ -246,6 +303,13 @@ def _registros(export: object, ruta: str, entrada: pathlib.Path) -> list[object]
         donde = f"en {ruta!r}" if ruta else "en la raíz del archivo"
         raise ExportIlegible(entrada, f"no hay una lista de registros {donde}")
     return contenedor
+
+
+def _rutas(registros: list[object]) -> tuple[str, ...]:
+    """Todas las rutas con punto que aparecen en algún registro del export."""
+    objetos = (registro for registro in registros if isinstance(registro, Mapping))
+    rutas = {ruta for registro in objetos for ruta in aplanar(registro)}
+    return tuple(sorted(rutas))
 
 
 def _valor_en(objeto: object, ruta: str) -> object | None:

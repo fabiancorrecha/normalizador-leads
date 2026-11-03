@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import hashlib
 import json
 import logging
 import os
@@ -26,6 +27,7 @@ from normalizador.adaptadores.configuracion import (
 )
 from normalizador.adaptadores.escritor import EscritorDeArchivos
 from normalizador.adaptadores.extractor_llm import ExtractorConClaude, Prompt
+from normalizador.adaptadores.historico_jsonl import HistoricoIlegible, HistoricoJsonl
 from normalizador.adaptadores.lector_json import LectorJson
 from normalizador.aplicacion.pipeline import Pipeline
 from normalizador.aplicacion.puertos import ExportIlegible, Extractor
@@ -44,6 +46,8 @@ CARGA_FALLIDA = 1
 EXTRACTOR_DICCIONARIO = "diccionario"
 EXTRACTOR_CLAUDE = "claude"
 PROMPT_POR_DEFECTO = pathlib.Path("prompts/extraccion-lead/v1.md")
+HISTORICO_POR_DEFECTO = pathlib.Path("datos/historico_calidad.jsonl")  # fuera de git
+LONGITUD_DE_LA_HUELLA = 16
 TIEMPO_MAXIMO_DEL_MODELO_S = 60.0
 REINTENTOS_DEL_MODELO = 2
 
@@ -71,6 +75,7 @@ def main(argumentos: list[str] | None = None) -> int:
         extractor = componer_extractor(opciones, diccionario, ruta_del_diccionario)
         ruta_del_perfil = opciones.config / CARPETA_DE_CLINICAS / f"{opciones.clinica}.yaml"
         perfil = cargar_perfil(ruta_del_perfil, diccionario)
+        huella = huella_de_la_carga(opciones.entrada, ruta_del_perfil, ruta_del_diccionario)
         pipeline = Pipeline(
             diccionario,
             perfil,
@@ -78,9 +83,15 @@ def main(argumentos: list[str] | None = None) -> int:
             EscritorDeArchivos(),
             extractor,
             RelojDelSistema(),
+            HistoricoJsonl(opciones.historico),
         )
-        resultado = pipeline.ejecutar(opciones.entrada, opciones.salida)
-    except (ConfiguracionNoValida, ExportIlegible, anthropic.AnthropicError) as error:
+        resultado = pipeline.ejecutar(opciones.entrada, opciones.salida, huella)
+    except (
+        ConfiguracionNoValida,
+        ExportIlegible,
+        HistoricoIlegible,
+        anthropic.AnthropicError,
+    ) as error:
         logger.error("carga abortada", extra={"datos": {"motivo": str(error)}})
         print(f"error: {error}", file=sys.stderr)
         return CARGA_FALLIDA
@@ -135,7 +146,25 @@ def leer_argumentos(argumentos: list[str] | None) -> argparse.Namespace:
         default=PROMPT_POR_DEFECTO,
         help=f"versión del prompt de extracción (por defecto, {PROMPT_POR_DEFECTO})",
     )
+    parser.add_argument(
+        "--historico",
+        type=pathlib.Path,
+        default=HISTORICO_POR_DEFECTO,
+        help="histórico acumulado de calidad, solo con agregados "
+        f"(por defecto, {HISTORICO_POR_DEFECTO})",
+    )
     return parser.parse_args(argumentos)
+
+
+def huella_de_la_carga(*rutas: pathlib.Path) -> str:
+    """SHA-256 del export, del perfil y del diccionario: la misma carga tiene la misma huella."""
+    partes = []
+    for ruta in rutas:
+        try:
+            partes.append(hashlib.sha256(ruta.read_bytes()).hexdigest()[:LONGITUD_DE_LA_HUELLA])
+        except OSError as error:
+            raise ExportIlegible(ruta, f"no se puede leer: {error.strerror}") from error
+    return "-".join(partes)
 
 
 def componer_extractor(
