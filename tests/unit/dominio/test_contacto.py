@@ -26,6 +26,9 @@ def email(valor):
         ("+880 1711 556677", "BD", "+8801711556677"),
         ("612 345 678", "ES", "+34612345678"),  # sin prefijo: se interpreta con el país del lead
         ("+52 55 4412 8890", None, "+525544128890"),  # con prefijo no hace falta el país
+        ("(+52) 55 4412 8890", None, "+525544128890"),
+        ("Tel: +52 55 4412 8890", None, "+525544128890"),
+        ("＋52 55 4412 8890", None, "+525544128890"),  # «más» de ancho completo
     ],
 )
 def test_REQ_NOR_007_telefono_en_e164(valor, pais, esperado):
@@ -39,7 +42,9 @@ def test_REQ_NOR_007_telefono_en_e164(valor, pais, esperado):
         ("612 345 678", "GB", "+44612345678"),  # un móvil español leído como británico
     ],
 )
-def test_REQ_NOR_007_telefono_posible_pero_no_asignado_se_conserva_con_aviso(valor, pais, esperado):
+def test_REQ_NOR_007_telefono_completo_pero_no_asignado_se_conserva_con_aviso(
+    valor, pais, esperado
+):
     assert telefono(valor, pais) == (esperado, (Aviso("phone", "telefono_no_verificado"),))
 
 
@@ -48,12 +53,23 @@ def test_REQ_NOR_007_telefono_sin_prefijo_ni_pais_queda_null_con_aviso(pais):
     assert telefono("07700 900182", pais) == (None, (Aviso("phone", "telefono_sin_region"),))
 
 
-@pytest.mark.parametrize("valor", ["abc", "12", 612345678, True])
-def test_REQ_NOR_007_telefono_que_no_se_puede_interpretar_queda_null_con_aviso(valor):
-    assert telefono(valor, "ES") == (None, (Aviso("phone", "telefono_no_valido"),))
+@pytest.mark.parametrize(
+    ("valor", "pais"),
+    [
+        ("abc", "ES"),
+        ("abc", None),  # sin país tampoco es «sin región»: no es un número
+        ("12", "ES"),
+        ("+999 123 456 789", None),  # prefijo de país inexistente
+        ("4412 8890", "MX"),  # el 4426 sin el prefijo de zona: incompleto, no marcable
+        (612345678, "ES"),
+        (True, "ES"),
+    ],
+)
+def test_REQ_NOR_007_telefono_que_no_se_puede_interpretar_queda_null_con_aviso(valor, pais):
+    assert telefono(valor, pais) == (None, (Aviso("phone", "telefono_no_valido"),))
 
 
-@pytest.mark.parametrize("valor", [None, "", "   "])
+@pytest.mark.parametrize("valor", [None, "", "   ", "​"])
 def test_REQ_NOR_007_telefono_ausente_queda_null_con_aviso_de_dato_ausente(valor):
     assert telefono(valor, "ES") == (None, (Aviso("phone", "dato_ausente"),))
 
@@ -64,6 +80,9 @@ def test_REQ_NOR_007_telefono_ausente_queda_null_con_aviso_de_dato_ausente(valor
         ("MARIAM.KHOURY@example.com", "mariam.khoury@example.com"),
         ("  d.volkov@example.ru ", "d.volkov@example.ru"),
         ("john.reeves@example.co.uk", "john.reeves@example.co.uk"),
+        ("juan+citas@mi-clinica.es", "juan+citas@mi-clinica.es"),
+        ("josé@correo.españa.es", "josé@correo.españa.es"),
+        ("иван@почта.рф", "иван@почта.рф"),
     ],
 )
 def test_REQ_NOR_008_email_sin_espacios_y_en_minusculas(valor, esperado):
@@ -80,8 +99,21 @@ def test_REQ_NOR_008_email_sin_espacios_y_en_minusculas(valor, esperado):
         "a@.example.com",
         "a@example..com",
         "a@example.com.",
+        ".a@example.com",
+        "a..b@example.com",
         "mailto:a@example.com",
+        "<juan@example.com>",
+        "juan@example.com;",
+        "juan@example.com,",
+        "(juan@example.com)",
+        "a@example.com?subject=hola",
+        "juan@exa/mple.com",
+        "juan@example.c",
+        "juan@ex_ample.com",
+        "juan@-example-.com",
         "a@example.com​",  # espacio de ancho cero
+        "juan@exaㅤmple.com",  # relleno hangul: una letra que no se ve
+        "juan@example.com\udc80",  # surrogate suelto
         42,
     ],
 )
@@ -89,6 +121,6 @@ def test_REQ_NOR_008_email_sin_formato_queda_null_con_aviso(valor):
     assert email(valor) == (None, (Aviso("email", "email_no_valido"),))
 
 
-@pytest.mark.parametrize("valor", [None, "", "  "])
+@pytest.mark.parametrize("valor", [None, "", "  ", "﻿"])
 def test_REQ_NOR_008_email_ausente_queda_null_con_aviso_de_dato_ausente(valor):
     assert email(valor) == (None, (Aviso("email", "dato_ausente"),))

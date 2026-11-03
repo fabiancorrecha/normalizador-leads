@@ -6,9 +6,13 @@ histórico de calidad no repiten datos personales (docs/riesgos.md, riesgo 2).
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 
 DATO_AUSENTE = "dato_ausente"
+# Letras que no se ven: rellenos hangul y el patrón braille en blanco. Las categorías Unicode C*
+# (control, formato como el ancho cero, surrogates, uso privado y sin asignar) tampoco se ven.
+LETRAS_INVISIBLES = frozenset("ᅟᅠㅤﾠ⠀")
 
 
 @dataclass(frozen=True)
@@ -35,5 +39,17 @@ class Normalizado[T]:
 
 
 def esta_ausente(valor: object) -> bool:
-    """None o un texto en blanco: el dato no vino, que no es lo mismo que venir mal."""
-    return valor is None or (isinstance(valor, str) and not valor.strip())
+    """None o un texto sin ningún carácter visible: el dato no vino, que no es venir mal."""
+    return valor is None or (isinstance(valor, str) and not any(map(es_visible, valor)))
+
+
+def es_visible(caracter: str) -> bool:
+    return not (caracter.isspace() or es_invisible(caracter))
+
+
+def es_invisible(caracter: str) -> bool:
+    return unicodedata.category(caracter).startswith("C") or caracter in LETRAS_INVISIBLES
+
+
+def tiene_invisibles(texto: str) -> bool:
+    return any(map(es_invisible, texto))

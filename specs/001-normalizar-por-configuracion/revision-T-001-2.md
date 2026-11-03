@@ -1,9 +1,9 @@
-# Segunda revisión de T-001-2 — hallazgos pendientes
+# Segunda revisión de T-001-2 — hallazgos (aplicados)
 
-Resultado: 0 críticos, 0 altos, 7 medios y 5 bajos. Ninguno cambia los 15 registros de ejemplo ni
-bloquea A y B. Todos tocan `src/normalizador/dominio/`, que ninguna tarea posterior puede editar: para
-aplicarlos hay que reactivar T-001-2 (`python3 evals/alcance.py --iniciar T-001-2`), retirar su ✅ en
-`tasks.md` y volver a cerrarla con `make check` en verde.
+Resultado: 0 críticos, 0 altos, 7 medios y 5 bajos. Ninguno cambiaba los 15 registros de ejemplo.
+**Los 12 están aplicados** (T-001-2 se reactivó para ello el 2026-11-03), cada uno con su test; se
+conserva la lista como registro de lo que se encontró y por qué importaba. El 4423 pasó a
+`fecha_ambigua` por decisión de la persona (el perfil de A declara dd/mm y mm/dd).
 
 ## Medios
 1. `fechas.py`, `_validar_formato`: valida cada directiva por separado, no la combinación. Una

@@ -36,13 +36,16 @@ def resultado(normalizado):
         (("Linnea", "Johansson"), "Linnea Johansson"),
         (("Sofía Narváez",), "Sofía Narváez"),
         ((" Grace ", None), "Grace"),
+        (("﻿Mariam Khoury",), "Mariam Khoury"),  # un BOM al principio
+        (("می‌خواهم",), "می‌خواهم"),  # el ZWNJ forma parte de nombres persas
     ],
 )
 def test_REQ_NOR_009_nombre_completo_sin_espacios_sobrantes(partes, esperado):
     assert resultado(normalizar_nombre(*partes)) == (esperado, ())
 
 
-@pytest.mark.parametrize("partes", [(None,), ("",), ("  ", None)])
+# Un nombre hecho solo de caracteres invisibles (ancho cero, relleno hangul) tampoco es un nombre.
+@pytest.mark.parametrize("partes", [(None,), ("",), ("  ", None), ("​",), ("ㅤ", "")])
 def test_REQ_NOR_009_nombre_ausente_queda_null_con_aviso_de_dato_ausente(partes):
     assert resultado(normalizar_nombre(*partes)) == (None, (Aviso("full_name", "dato_ausente"),))
 
@@ -85,15 +88,25 @@ def test_REQ_NOR_010_alias_repetidos_que_llevan_al_mismo_codigo_valen():
     assert alias.codigo_de("lebanon") == "LB"
 
 
+def test_REQ_NOR_010_los_alias_se_validan_tambien_al_construirlos_directamente():
+    assert AliasDePaises({"Líbano": "LB"}).codigo_de("Líbano") == "LB"
+    with pytest.raises(ValueError):
+        AliasDePaises({"Reino Unido": "UK"})
+
+
 @pytest.mark.parametrize(
     "alias",
     [
         {"Reino Unido": "gb "},
         {"Reino Unido": "GBR"},
+        {"Reino Unido": "UK"},  # no es un código ISO: el de Reino Unido es GB
+        {"Grecia": "EL"},
         {"España": 34},
         {"": "ES"},
         {"  ": "ES"},
         {"Sudáfrica": "ZA", "SA": "ZA", "Arabia Saudí": "SA"},  # «SA» lleva a ZA y a SA
+        {"Sudáfrica": "ZA", "SA": "ZA"},  # «SA» es el código de Arabia Saudí
+        {"CH": "CN"},  # «CH» es el código de Suiza
     ],
 )
 def test_REQ_NOR_018_alias_de_paises_mal_configurados_fallan_al_crearlos(alias):

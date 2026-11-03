@@ -1,8 +1,9 @@
 """Los 15 registros de los exports de ejemplo de docs/, campo a campo (detalle de T-001-2).
 
 El mapeo de cada clínica lo hará la configuración (T-001-3); aquí va escrito a mano para probar solo
-los normalizadores. Perfil de prueba de A: dd/mm/aaaa, aaaa-mm-dd, dd-mes-aaaa y epoch en
-Europe/Madrid; B trae ISO 8601 con desfase. Rango: 180 días hasta el export de A (27/10/2026 08:14).
+los normalizadores. Perfil de prueba de A: dd/mm/aaaa y mm/dd/aaaa (el export mezcla formatos, así
+que el orden día/mes no se da por hecho), aaaa-mm-dd, dd-mes-aaaa y epoch, en Europe/Madrid; B trae
+ISO 8601 con desfase. Rango: 180 días hasta el export de A (27/10/2026 08:14).
 """
 
 import json
@@ -25,7 +26,9 @@ from .comun import EXPORT_DE_A, MADRID, MESES_ES
 
 DOCS = pathlib.Path(__file__).resolve().parents[3] / "docs"
 LECTURAS = {
-    "clinica_a": LecturaDeFechas(("%d/%m/%Y", "%Y-%m-%d", "%d-%b-%Y", "epoch_s"), MADRID, MESES_ES),
+    "clinica_a": LecturaDeFechas(
+        ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d", "%d-%b-%Y", "epoch_s"), MADRID, MESES_ES
+    ),
     "clinica_b": LecturaDeFechas(("iso8601",), MADRID),
 }
 RANGO = RangoPlausible(referencia=EXPORT_DE_A, dias_maximos=180)
@@ -92,7 +95,7 @@ FECHAS = {
     ("clinica_a", "4420"): ("2026-10-26T23:00:00Z", None),
     ("clinica_a", "4421"): ("2025-10-27T00:00:00Z", "fecha_fuera_de_rango"),
     ("clinica_a", "4422"): ("2026-10-18T22:00:00Z", None),
-    ("clinica_a", "4423"): ("2026-04-02T22:00:00Z", "fecha_fuera_de_rango"),  # 03/04, dd/mm
+    ("clinica_a", "4423"): (None, "fecha_ambigua"),  # 03/04/2026: ¿3 de abril o 4 de marzo?
     ("clinica_a", "4424"): ("2026-10-24T22:00:00Z", None),
     ("clinica_a", "4425"): ("2026-10-22T22:00:00Z", None),
     ("clinica_a", "4426"): ("2026-10-23T22:00:00Z", None),
@@ -179,6 +182,12 @@ def esperado(campo, valor_y_codigo):
 
 def obtenido(normalizado):
     return normalizado.valor, normalizado.avisos
+
+
+def test_REQ_NOR_005_las_tablas_cubren_los_15_registros_de_los_dos_exports():
+    assert len(REGISTROS) == 15
+    for tabla in (FECHAS, TELEFONOS, EMAILS, PAISES, NOMBRES):
+        assert set(tabla) == set(REGISTROS)
 
 
 @pytest.mark.parametrize("clave", CLAVES)
