@@ -1,0 +1,370 @@
+# Diccionario semántico (ADR-0001): cómo se reconoce cada campo del esquema común en el export de
+# cualquier clínica. Es configuración: un sinónimo nuevo sirve para todas las clínicas sin tocar código.
+# Los nombres se comparan en minúsculas, sin tildes y con `_` o `-` como espacios.
+version: 1
+
+# Reranking: puntuación = peso_nombre × nombre + peso_contenido × contenido.
+#   nombre: 1,0 si el campo de origen es un sinónimo exacto; 0,5 si comparte una parte (`correo_electronico`
+#           y `correo`); 0 si no.
+#   contenido: % de valores presentes que pasan el validador del campo.
+# Un campo se mapea si el mejor candidato llega al umbral y saca al segundo al menos el margen; si no,
+# queda sin mapear con `mapeo_dudoso` y el perfil puede fijarlo (REQ-NOR-014 y 015).
+# Pesos, umbral y margen son supuestos iniciales: calibrar con el histórico de calidad (T-001-8).
+mapeo:
+  peso_nombre: 0.5
+  peso_contenido: 0.5
+  umbral: 0.6
+  margen: 0.15
+
+# Validadores: identificador, nombre, email, telefono, pais, fecha, texto (dominio/diccionario.py).
+campos:
+  lead_id:
+    validador: identificador
+    sinonimos: [id, ref, referencia, reference, identificador, identifier, lead_id, codigo, code,
+                numero, number, nr, external_id, record_id, id_lead, id_paciente, patient_id, uid]
+  full_name:
+    validador: nombre
+    sinonimos: [nombre_completo, nombre_y_apellidos, full_name, fullname, name, paciente, patient,
+                patient_name, contact_name, nome_completo, nom_complet, nom_et_prenom,
+                vollständiger_name, imię_i_nazwisko, фио, полное_имя]
+    # Cuando el nombre viene en dos campos: una lista de sinónimos por parte, en orden.
+    composicion:
+      - [first_name, firstname, given_name, nombre, nome, prenom, prénom, vorname, imię, imie, имя]
+      - [last_name, lastname, surname, family_name, apellidos, apellido, cognome, nom, nachname,
+         nazwisko, фамилия, apelido, sobrenome]
+  email:
+    validador: email
+    sinonimos: [email, e_mail, mail, correo, correo_electronico, email_address, emailaddress,
+                courriel, adresse_email, posta_elettronica, adres_email, почта, эл_почта, e_mail_adresse]
+  phone:
+    validador: telefono
+    sinonimos: [tel, telefono, telephone, phone, phone_number, mobile, movil, celular, cell, cellphone,
+                whatsapp, telefono_movil, numero_de_telefono, telefon, telefone, portable, gsm, handy,
+                телефон, mobilny, numero]
+  country:
+    validador: pais
+    sinonimos: [pais, country, residence, residencia, pais_de_residencia, pais_residencia,
+                country_of_residence, nationality, nacionalidad, pays, paese, land, kraj, страна,
+                country_code, codigo_pais]
+  created_at:
+    validador: fecha
+    sinonimos: [fecha_alta, fecha, fecha_registro, fecha_creacion, fecha_de_alta, fecha_contacto,
+                created_at, created, created_on, received_at, received, date, timestamp, inserted_at,
+                submitted_at, data, datum, date_creation, data_creazione, дата, дата_создания]
+  enquiry_text:
+    validador: texto
+    sinonimos: [mensaje, enquiry, inquiry, consulta, message, texto, text, comentarios, comments,
+                comment, motivo, descripcion, description, notas, notes, body, query, richiesta,
+                demande, anfrage, сообщение, wiadomość, wiadomosc, mensagem, observaciones]
+
+# Nombres de mes para los formatos con %b (en minúsculas o mayúsculas, con o sin tilde).
+# Cada nombre, una sola vez: los que coinciden en español e inglés (feb, mar…) se listan una vez.
+meses:
+  ene: 1
+  enero: 1
+  jan: 1
+  january: 1
+  feb: 2
+  febrero: 2
+  february: 2
+  mar: 3
+  marzo: 3
+  march: 3
+  abr: 4
+  abril: 4
+  apr: 4
+  april: 4
+  may: 5
+  mayo: 5
+  jun: 6
+  junio: 6
+  june: 6
+  jul: 7
+  julio: 7
+  july: 7
+  ago: 8
+  agosto: 8
+  aug: 8
+  august: 8
+  sep: 9
+  sept: 9
+  septiembre: 9
+  setiembre: 9
+  september: 9
+  oct: 10
+  octubre: 10
+  october: 10
+  nov: 11
+  noviembre: 11
+  november: 11
+  dic: 12
+  diciembre: 12
+  dec: 12
+  december: 12
+
+# Alias de país → ISO 3166-1 alfa-2. Un código se reconoce porque es el de algún alias. Faltan países:
+# la lista ISO completa es REC-025. Un alias de dos letras tiene que ser el propio código.
+paises:
+  # Europa
+  España: ES
+  Spain: ES
+  Espagne: ES
+  Portugal: PT
+  Francia: FR
+  France: FR
+  Alemania: DE
+  Germany: DE
+  Deutschland: DE
+  Italia: IT
+  Italy: IT
+  Reino Unido: GB
+  United Kingdom: GB
+  Great Britain: GB
+  Inglaterra: GB
+  England: GB
+  Irlanda: IE
+  Ireland: IE
+  Países Bajos: NL
+  Holanda: NL
+  Netherlands: NL
+  Nederland: NL
+  Bélgica: BE
+  Belgium: BE
+  Belgique: BE
+  Luxemburgo: LU
+  Luxembourg: LU
+  Suiza: CH
+  Switzerland: CH
+  Schweiz: CH
+  Suisse: CH
+  Austria: AT
+  Österreich: AT
+  Suecia: SE
+  Sweden: SE
+  Sverige: SE
+  Noruega: "NO"
+  Norway: "NO"
+  Norge: "NO"
+  Dinamarca: DK
+  Denmark: DK
+  Danmark: DK
+  Finlandia: FI
+  Finland: FI
+  Suomi: FI
+  Islandia: IS
+  Iceland: IS
+  Polonia: PL
+  Poland: PL
+  Polska: PL
+  Chequia: CZ
+  República Checa: CZ
+  Czech Republic: CZ
+  Czechia: CZ
+  Eslovaquia: SK
+  Slovakia: SK
+  Hungría: HU
+  Hungary: HU
+  Rumanía: RO
+  Romania: RO
+  România: RO
+  Bulgaria: BG
+  България: BG
+  Grecia: GR
+  Greece: GR
+  Ελλάδα: GR
+  Croacia: HR
+  Croatia: HR
+  Eslovenia: SI
+  Slovenia: SI
+  Serbia: RS
+  Србија: RS
+  Bosnia y Herzegovina: BA
+  Bosnia and Herzegovina: BA
+  Montenegro: ME
+  Macedonia del Norte: MK
+  North Macedonia: MK
+  Albania: AL
+  Estonia: EE
+  Letonia: LV
+  Latvia: LV
+  Lituania: LT
+  Lithuania: LT
+  Ucrania: UA
+  Ukraine: UA
+  Україна: UA
+  Bielorrusia: BY
+  Belarus: BY
+  Moldavia: MD
+  Moldova: MD
+  Rusia: RU
+  Russia: RU
+  Russian Federation: RU
+  Россия: RU
+  Georgia: GE
+  Armenia: AM
+  Azerbaiyán: AZ
+  Azerbaijan: AZ
+  Turquía: TR
+  Turkey: TR
+  Türkiye: TR
+  Chipre: CY
+  Cyprus: CY
+  Malta: MT
+  Andorra: AD
+  # Oriente Medio y norte de África
+  Marruecos: MA
+  Morocco: MA
+  Maroc: MA
+  المغرب: MA
+  Argelia: DZ
+  Algeria: DZ
+  Algérie: DZ
+  Túnez: TN
+  Tunisia: TN
+  Tunisie: TN
+  Libia: LY
+  Libya: LY
+  Egipto: EG
+  Egypt: EG
+  مصر: EG
+  Líbano: LB
+  Lebanon: LB
+  Liban: LB
+  لبنان: LB
+  Siria: SY
+  Syria: SY
+  Jordania: JO
+  Jordan: JO
+  Israel: IL
+  Palestina: PS
+  Palestine: PS
+  Irak: IQ
+  Iraq: IQ
+  Irán: IR
+  Iran: IR
+  Arabia Saudí: SA
+  Arabia Saudita: SA
+  Saudi Arabia: SA
+  السعودية: SA
+  Emiratos Árabes Unidos: AE
+  Emiratos Árabes: AE
+  United Arab Emirates: AE
+  UAE: AE
+  الإمارات: AE
+  Catar: QA
+  Qatar: QA
+  Kuwait: KW
+  Baréin: BH
+  Bahrain: BH
+  Omán: OM
+  Oman: OM
+  Yemen: YE
+  # África
+  Nigeria: NG
+  Ghana: GH
+  Senegal: SN
+  Sénégal: SN
+  Costa de Marfil: CI
+  Côte d'Ivoire: CI
+  Ivory Coast: CI
+  Camerún: CM
+  Cameroon: CM
+  Cameroun: CM
+  Kenia: KE
+  Kenya: KE
+  Etiopía: ET
+  Ethiopia: ET
+  Tanzania: TZ
+  Uganda: UG
+  Sudáfrica: ZA
+  South Africa: ZA
+  Angola: AO
+  Mozambique: MZ
+  Moçambique: MZ
+  Congo: CD
+  República Democrática del Congo: CD
+  Democratic Republic of the Congo: CD
+  Guinea Ecuatorial: GQ
+  Equatorial Guinea: GQ
+  # América
+  Estados Unidos: US
+  United States: US
+  United States of America: US
+  USA: US
+  EEUU: US
+  Canadá: CA
+  Canada: CA
+  México: MX
+  Mexico: MX
+  Guatemala: GT
+  Honduras: HN
+  El Salvador: SV
+  Nicaragua: NI
+  Costa Rica: CR
+  Panamá: PA
+  Panama: PA
+  Cuba: CU
+  República Dominicana: DO
+  Dominican Republic: DO
+  Puerto Rico: PR
+  Colombia: CO
+  Venezuela: VE
+  Ecuador: EC
+  Perú: PE
+  Peru: PE
+  Bolivia: BO
+  Chile: CL
+  Argentina: AR
+  Uruguay: UY
+  Paraguay: PY
+  Brasil: BR
+  Brazil: BR
+  # Asia y Oceanía
+  Bangladés: BD
+  Bangladesh: BD
+  বাংলাদেশ: BD
+  Pakistán: PK
+  Pakistan: PK
+  India: IN
+  भारत: IN
+  Sri Lanka: LK
+  Nepal: NP
+  Afganistán: AF
+  Afghanistan: AF
+  Kazajistán: KZ
+  Kazakhstan: KZ
+  Uzbekistán: UZ
+  Uzbekistan: UZ
+  China: CN
+  中国: CN
+  Hong Kong: HK
+  Taiwán: TW
+  Taiwan: TW
+  Japón: JP
+  Japan: JP
+  日本: JP
+  Corea del Sur: KR
+  South Korea: KR
+  Korea: KR
+  Filipinas: PH
+  Philippines: PH
+  Vietnam: VN
+  Việt Nam: VN
+  Tailandia: TH
+  Thailand: TH
+  Malasia: MY
+  Malaysia: MY
+  Singapur: SG
+  Singapore: SG
+  Indonesia: ID
+  Australia: AU
+  Nueva Zelanda: NZ
+  New Zealand: NZ
+
+# Extracción del texto libre (catálogo de especialidades, señales de urgencia e informes, idiomas):
+# la rellena y la valida T-001-6 (dominio/extraccion.py).
+extraccion: {}
+
+# Patrones de documentos de identidad que se enmascaran antes de enviar el texto al modelo:
+# los rellena y los valida T-001-7 (dominio/enmascarado.py).
+enmascarado: {}
