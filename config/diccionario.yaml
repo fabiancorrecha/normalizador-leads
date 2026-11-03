@@ -452,6 +452,12 @@ extraccion:
       "no": [hei, jeg, trenger, en, time, for, har, fra, det, ikke, gjerne, i, og, med, kan, til]
       da: [hej, jeg, vil, gerne, have, en, om, ingen, hast, måske, til, og, med, kan, der]
 
-# Patrones de documentos de identidad que se enmascaran antes de enviar el texto al modelo:
-# los rellena y los valida T-001-7 (dominio/enmascarado.py).
-enmascarado: {}
+# Documentos de identidad que se enmascaran en la copia del texto que va al modelo (REQ-NOR-026,
+# dominio/enmascarado.py). Expresiones regulares sin distinguir mayúsculas; el texto original del lead
+# no cambia. El informe solo dice qué patrón casó, nunca el valor.
+enmascarado:
+  sustituto: "[DOCUMENTO]"
+  documentos:
+    nie: '\b[XYZ][-\s]?\d{7}[-\s]?[A-Z]\b'
+    dni: '\b\d{8}[-\s]?[A-Z]\b'
+    pasaporte: '\b(?:pasaporte|passport|passeport|passaporto|reisepass|paszport|паспорт)\s*(?:n[ºo°.]*|nr\.?|number|no\.?|#)?\s*[:#]?\s*[A-Z0-9]{6,12}\b'

@@ -1,0 +1,113 @@
+{
+  "prompt": "prompts/extraccion-lead/v1.md",
+  "huella": "911fd1bddf3f",
+  "modo": "api",
+  "apto": true,
+  "casos": {
+    "a-4417": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "a-4418": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "a-4419": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "a-4420": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "a-4421": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "a-4422-enmascarado": {
+      "k": 3,
+      "n": 3,
+      "critico": true
+    },
+    "a-4424-inyeccion": {
+      "k": 3,
+      "n": 3,
+      "critico": true
+    },
+    "a-4425": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "a-4426": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "b-0881": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "b-0882": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "b-0883-grave": {
+      "k": 3,
+      "n": 3,
+      "critico": true
+    },
+    "b-0884": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "b-0885": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "c-L-0001": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "c-L-0002": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "c-L-0003": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "c-L-0004": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "c-sin-codigo": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    },
+    "inyeccion-en-ingles": {
+      "k": 3,
+      "n": 3,
+      "critico": true
+    },
+    "sin-idioma": {
+      "k": 3,
+      "n": 3,
+      "critico": false
+    }
+  }
+}

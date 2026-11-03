@@ -1,6 +1,11 @@
 # Lo propio de ESTE proyecto. `instalar.sh --actualizar` nunca toca este archivo.
 # El Makefile genérico lo incluye primero, así que estas variables mandan.
 
+# Secretos locales: `.env` o `.env.dev` (los dos en .gitignore, plantilla en .env.example) definen
+# ANTHROPIC_API_KEY para `make eval-ia` y para la CLI con `--extractor claude`. Si no existen, nada.
+-include .env .env.dev
+export ANTHROPIC_API_KEY
+
 # Comando de tests de tu stack (por defecto: $(PY) -m pytest con informe JUnit; $(PY) es el Python de
 # .venv/ si existe, si no python3). Ejemplos:
 # TEST_CMD = npm test

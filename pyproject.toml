@@ -13,6 +13,7 @@ dependencies = [
     "pydantic==2.14.1",
     "PyYAML==6.0.3",
     "phonenumbers==9.0.42",
+    "anthropic==2.3.0",
 ]
 
 [tool.hatch.build.targets.wheel]
