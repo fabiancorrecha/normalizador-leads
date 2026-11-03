@@ -1,6 +1,6 @@
 # ADR-0002 — Extraemos los campos del texto libre con Claude tras un puerto y con el diccionario como respaldo
 
-Estado: Propuesta · Fecha: 2026-11-03 · Decide: Producto, Técnico y Seguridad (DPO)
+Estado: Aceptada · Fecha: 2026-11-03 · Decide: Producto, Técnico y Seguridad (DPO)
 <!-- Cambia Propuesta por Aceptada tú (no el agente). Si más adelante cambia: "Reemplazada por ADR-NNNN". -->
 
 ## Contexto

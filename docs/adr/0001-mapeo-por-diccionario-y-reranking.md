@@ -1,6 +1,6 @@
 # ADR-0001 — Mapeamos cada clínica al esquema común con un diccionario semántico y un reranking determinista
 
-Estado: Propuesta · Fecha: 2026-11-03 · Decide: Producto y Técnico
+Estado: Aceptada · Fecha: 2026-11-03 · Decide: Producto y Técnico
 <!-- Cambia Propuesta por Aceptada tú (no el agente). Si más adelante cambia: "Reemplazada por ADR-NNNN". -->
 
 ## Contexto
