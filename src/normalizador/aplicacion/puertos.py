@@ -6,12 +6,10 @@ Los adaptadores los implementan (archivos, modelo de IA, reloj) y los tests usan
 from __future__ import annotations
 
 import pathlib
-from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Protocol
 
-from normalizador.dominio.avisos import Aviso
-from normalizador.dominio.lead import Urgencia
+from normalizador.dominio.extraccion import ExtraccionDelTexto
 
 if TYPE_CHECKING:
     from normalizador.aplicacion.pipeline import ResultadoDeCarga
@@ -24,17 +22,6 @@ class ExportIlegible(ValueError):
         self.archivo = str(archivo)
         self.motivo = motivo
         super().__init__(f"{self.archivo}: {motivo}")
-
-
-@dataclass(frozen=True)
-class ExtraccionDelTexto:
-    """Lo que se deduce del mensaje del paciente (REQ-NOR-019 a 022)."""
-
-    specialty: str | None
-    urgency: Urgencia
-    has_reports: bool | None
-    language: str | None
-    avisos: tuple[Aviso, ...] = ()
 
 
 class Extractor(Protocol):

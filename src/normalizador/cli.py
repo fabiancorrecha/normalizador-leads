@@ -22,8 +22,10 @@ from normalizador.adaptadores.configuracion import (
 )
 from normalizador.adaptadores.escritor import EscritorDeArchivos
 from normalizador.adaptadores.lector_json import LectorJson
-from normalizador.aplicacion.pipeline import ExtractorNulo, Pipeline
+from normalizador.aplicacion.pipeline import Pipeline
 from normalizador.aplicacion.puertos import ExportIlegible
+from normalizador.dominio.diccionario import Diccionario
+from normalizador.dominio.extraccion import ExtractorPorDiccionario, ReglasDeExtraccion
 
 logger = logging.getLogger("normalizador")
 
@@ -52,7 +54,9 @@ def main(argumentos: list[str] | None = None) -> int:
     opciones = leer_argumentos(argumentos)
     configurar_logs()
     try:
-        diccionario = cargar_diccionario(opciones.config / ARCHIVO_DEL_DICCIONARIO)
+        ruta_del_diccionario = opciones.config / ARCHIVO_DEL_DICCIONARIO
+        diccionario = cargar_diccionario(ruta_del_diccionario)
+        extractor = ExtractorPorDiccionario(reglas_de_extraccion(diccionario, ruta_del_diccionario))
         ruta_del_perfil = opciones.config / CARPETA_DE_CLINICAS / f"{opciones.clinica}.yaml"
         perfil = cargar_perfil(ruta_del_perfil, diccionario)
         pipeline = Pipeline(
@@ -60,7 +64,7 @@ def main(argumentos: list[str] | None = None) -> int:
             perfil,
             LectorJson(),
             EscritorDeArchivos(),
-            ExtractorNulo(),
+            extractor,
             RelojDelSistema(),
         )
         resultado = pipeline.ejecutar(opciones.entrada, opciones.salida)
@@ -102,6 +106,14 @@ def leer_argumentos(argumentos: list[str] | None) -> argparse.Namespace:
         help="carpeta con diccionario.yaml y clinicas/ (por defecto, config/)",
     )
     return parser.parse_args(argumentos)
+
+
+def reglas_de_extraccion(diccionario: Diccionario, ruta: pathlib.Path) -> ReglasDeExtraccion:
+    """La sección `extraccion` la valida el dominio; su error es de configuración (REQ-NOR-018)."""
+    try:
+        return ReglasDeExtraccion.desde(diccionario.extraccion)
+    except ValueError as error:
+        raise ConfiguracionNoValida(ruta, "extraccion", str(error)) from error
 
 
 def identificador_de_clinica(valor: str) -> str:

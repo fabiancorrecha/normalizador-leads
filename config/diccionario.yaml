@@ -361,9 +361,96 @@ paises:
   Nueva Zelanda: NZ
   New Zealand: NZ
 
-# Extracción del texto libre (catálogo de especialidades, señales de urgencia e informes, idiomas):
-# la rellena y la valida T-001-6 (dominio/extraccion.py).
-extraccion: {}
+# Extracción del texto libre por diccionario (dominio/extraccion.py): es el respaldo del extractor con
+# modelo (ADR-0002) y la base de su eval. Las señales se comparan sin tildes ni mayúsculas, y con los
+# guiones y apóstrofos como espacios. Una señal de una sola palabra casa con el principio de una palabra
+# del texto (`cardiolog` → «cardiológico»); una de varias palabras, con el texto entero.
+extraccion:
+  # Catálogo cerrado (REQ-NOR-019): gana la especialidad con más señales; un empate deja null con aviso.
+  especialidades:
+    traumatología: [rodilla, cadera, prótesis, traumatólogo, traumatología, ortopedia, ortopédico,
+                    artroscopia, menisco, ligamento, columna, hombro, fractura, knee, hip, orthopaedic,
+                    orthopedic, arthroscopy, meniscus, ligament, spine, shoulder, fracture, hüft, knie,
+                    orthopäd, meniskus, kneoperasjon, kne, hofte, höft, knä, ortoped, genou, hanche,
+                    orthopéd, prothèse, ginocchio, anca, protesi, kolano, biodro, колен, бедр, ортопед,
+                    травматолог, joelho, quadril]
+    cardiología: [corazón, cardiólogo, cardiológico, cardiología, cardíaco, cardiac, heart, cardiolog,
+                  сердц, кардиолог, herz, kardiolog, hjärt, hjerte, cœur, coeur, cardiaque, cuore, serce,
+                  coração]
+    oncología: [oncología, oncológico, oncólogo, cáncer, tumor, oncology, cancer, oncolog, krebs, onkolog,
+                рак, онколог, опухол, cancro, tumore, nowotwór, kræft, kreft, câncer]
+    reproducción asistida: [fertilidad, reproducción asistida, fiv, fecundación in vitro, infertilidad,
+                            fertility, ivf, infertility, in vitro, kinderwunsch, fertilität, fertilitet,
+                            fécondation, fertilité, fecondazione, fertilità, płodność, эко, бесплод,
+                            fertilidade]
+    oftalmología: [ojos, ojo, oftalmólogo, oftalmología, oftalmológico, cataratas, catarata, láser ocular,
+                   eye, eyes, cataract, laser eye, ophthalmolog, augen, auge, grauer star, augenlaser, zaćm,
+                   okulist, окулист, катаракт, глаз, офтальмолог, øye, øyne, øyelaser, ögon, grå starr, oeil,
+                   yeux, ophtalmo, cataracte, occhi, occhio, cataratta, oculist, olhos]
+    cirugía bariátrica: [bariátrica, bariátrico, bariatric, bariatrica, obesidad, obesity, bypass gástrico,
+                         gastric bypass, manga gástrica, gastric sleeve, adipositas, magenbypass, otyłość,
+                         ожирен, бариатр, fedme, obesità, obésité, obesidade]
+    cirugía plástica: [cirugía plástica, cirugía estética, estética, plastic surgery, cosmetic surgery,
+                       plastische, schönheitsoperation, пластическ, chirurgia plastica, chirurgia estetica,
+                       chirurgie plastique, chirurgie esthétique, plastisk, plastikk, chirurgia plastyczna,
+                       plástica]
+  # Urgencia (REQ-NOR-020): alta si hay gravedad; si no, baja si lo dice el paciente; si no, alta si pide
+  # prisa; si no, media. Las negaciones («no es urgente») van en `baja` y por eso se miran antes.
+  urgencia:
+    gravedad: [avanzado, avanzada, advanced, grave, serious, allvarlig, alvorlig, ernst, schwer, oncolog,
+               cáncer, cancer, krebs, kreft, kræft, cancro, рак, онколог, опухол, tumor, nowotwór, ictus,
+               infarto, stroke, heart attack]
+    alta: [urgente, urgentemente, urgently, urgent, lo antes posible, cuanto antes, as soon as possible,
+           asap, next weeks, coming weeks, próximas semanas, nächsten wochen, möglichst bald, bald,
+           so schnell wie möglich, dringend, срочн, как можно скорее, скорее, så snart som möjligt, snarast,
+           så snart som mulig, snarest, haster, pilne, jak najszybciej, al più presto, d'urgence,
+           au plus vite, très vite, very fast, act fast, quickly, de inmediato, inmediatamente, immediately,
+           this week, esta semana]
+    baja: [no hay prisa, sin prisa, no es urgente, no urgente, no tengo prisa, no hay urgencia, sin urgencia,
+           not in a hurry, no hurry, no urgency, no rush, not urgent, non ho fretta, senza fretta,
+           non è urgente, kein zeitdruck, keine eile, nicht dringend, ingen hast, haster ikke, ikke travelt,
+           ingen brådska, nie pilne, elastyczny, termin elastyczny, flexible, flexibel, preventivo,
+           preventiva, preventive, revisión rutinaria, next spring, la primavera, en primavera, wiosną,
+           foråret, frühjahr, våren, pas urgent, pas pressé, sem pressa, não é urgente]
+  # Informes (REQ-NOR-021): primero las negaciones, después las afirmaciones; sin ninguna, null.
+  informes:
+    # `no` va entre comillas: sin ellas, YAML lo lee como el booleano false.
+    "no": [no tengo, no tenemos, no dispongo, sin informes, sin pruebas, not had any, have not had,
+         haven't had, haven't done, have not done, no tests, no reports, no previous, non ho ancora fatto,
+         non ho fatto, non ho esami, noch keine, keine berichte, keine befunde, nie mam, nie mamy, не делал,
+         не делали, нет анализов, нет обследован, ingen prøver, har ikke tatt, har inte gjort,
+         inga undersökningar, pas encore, n'ai pas de, pas d'examens, não tenho, ainda não fiz]
+    si: [resonancia, resonancias, informe, informes, estudios, análisis, pruebas, radiografía, radiografías,
+         ecografía, scans, scan, x-ray, x-rays, report, reports, mri, biopsy, test results, results, imaging,
+         images, обследовани, анализ, снимк, заключен, результат, wyniki, badań, badania, rapport, rapports,
+         scanner, scanners, bilan, irm, esami, referti, risonanza, bericht, berichte, befund, befunde,
+         röntgen, mrt, bilder, undersökning, undersökningar, journaler, prøver, mr-bilder, undersøgelse,
+         exames, relatórios, laudos]
+  # Idioma en que escribe el paciente (REQ-NOR-022, ISO 639-1): un alfabeto que no sea latino decide
+  # (15 letras o el 20 % del texto); si no, las palabras frecuentes de cada idioma (al menos dos).
+  idiomas:
+    alfabetos: {CYRILLIC: ru, ARABIC: ar, GREEK: el, HEBREW: he}
+    palabras:
+      # `no` e `y` van entre comillas: sin ellas, YAML los lee como booleanos.
+      es: [hola, buenos, buenas, gracias, tengo, quiero, gustaría, me, mi, mis, para, por, que, una, un,
+           el, la, los, las, de, con, si, "no", es, "y", en, del, consulta, hablo, escribo, interesa, años,
+           ya, desde, podrían, operarme]
+      en: [hello, hi, i, my, we, our, the, and, would, like, could, please, have, not, for, in, of, is, am,
+           are, surgery, treatment, you, it, at, from, this, as, but, be, to, with]
+      fr: [bonjour, je, les, mes, pour, merci, une, un, le, la, des, et, pas, avec, mon, ma, suis, vous,
+           en, me, à, tous, peux, par, ne, beaucoup, cherche, avis]
+      it: [buongiorno, salve, vorrei, non, ho, sono, di, per, un, una, il, la, le, informazioni, essere,
+           via, in, su, ancora, sto, preferisco, o]
+      de: [guten, tag, hallo, ich, und, für, habe, mich, bin, kein, keine, die, der, das, ist, eine, einen,
+           sie, bitte, nicht, aber, wohne, mir, in, den]
+      pt: [olá, bom, dia, gostaria, não, para, uma, um, de, com, por, favor, tenho, sou, obrigado, obrigada,
+           preciso]
+      pl: [dzień, dobry, dla, mojej, mamy, jest, nie, na, się, termin, najlepiej, interesuje, mnie,
+           operacja, wyniki, badań, proszę]
+      sv: [hej, jag, vi, har, och, min, pappa, behöver, en, att, det, är, alla, som, så, snart, möjligt,
+           läkarna, säger]
+      "no": [hei, jeg, trenger, en, time, for, har, fra, det, ikke, gjerne, i, og, med, kan, til]
+      da: [hej, jeg, vil, gerne, have, en, om, ingen, hast, måske, til, og, med, kan, der]
 
 # Patrones de documentos de identidad que se enmascaran antes de enviar el texto al modelo:
 # los rellena y los valida T-001-7 (dominio/enmascarado.py).

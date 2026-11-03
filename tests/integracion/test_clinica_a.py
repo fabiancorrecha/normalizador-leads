@@ -89,10 +89,10 @@ def test_REQ_NOR_001_un_lead_completo_sale_normalizado(leads):
         "country": "LB",
         "created_at": "2026-10-26T23:00:00Z",
         "enquiry_text": leads["clinica_a:4417"]["enquiry_text"],
-        "specialty": None,
-        "urgency": "media",
-        "has_reports": None,
-        "language": None,
+        "specialty": "traumatología",  # extraídos del texto por diccionario (T-001-6)
+        "urgency": "alta",
+        "has_reports": True,
+        "language": "es",
     }
     assert leads["clinica_a:4417"]["enquiry_text"].startswith("Buenos días. Tengo 54 años")
 

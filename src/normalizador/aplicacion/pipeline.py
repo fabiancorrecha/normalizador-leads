@@ -17,14 +17,14 @@ from datetime import UTC, datetime
 from normalizador.aplicacion.puertos import (
     Escritor,
     ExportIlegible,
-    ExtraccionDelTexto,
     Extractor,
     LectorDeExport,
     Reloj,
 )
-from normalizador.dominio.avisos import Aviso
+from normalizador.dominio.avisos import Aviso, esta_ausente
 from normalizador.dominio.contacto import normalizar_email, normalizar_telefono
 from normalizador.dominio.diccionario import Diccionario, ReglasDeLaClinica, validadores
+from normalizador.dominio.extraccion import SIN_TEXTO, ExtraccionDelTexto
 from normalizador.dominio.fechas import RangoPlausible, leer_fecha, normalizar_fecha
 from normalizador.dominio.identidad import (
     construir_lead_id,
@@ -39,7 +39,6 @@ logger = logging.getLogger("normalizador")
 
 REGISTRO_NO_VALIDO = "registro_no_valido"
 SIN_IDENTIFICADOR = "sin_identificador"
-URGENCIA_POR_DEFECTO = "media"
 SEPARADOR_DE_RUTA = "."
 
 
@@ -94,10 +93,10 @@ class ResultadoDeCarga:
 
 
 class ExtractorNulo:
-    """Sin extracción del texto hasta T-001-6: nulos y la urgencia por defecto (REQ-NOR-023)."""
+    """Un extractor que no extrae nada: para los tests del pipeline y para cargar sin extracción."""
 
     def extraer(self, texto: str | None) -> ExtraccionDelTexto:
-        return ExtraccionDelTexto(None, URGENCIA_POR_DEFECTO, None, None)
+        return SIN_TEXTO
 
 
 class Pipeline:
@@ -213,7 +212,8 @@ class Pipeline:
         telefono = normalizar_telefono(valores.get("phone"), pais.valor)
         fecha = normalizar_fecha(valores.get("created_at"), reglas.lectura, reglas.rango)
         texto = copiar_texto_original(valores.get("enquiry_text"))
-        extraccion = self.extractor.extraer(texto.valor)
+        # Sin texto no hay nada que extraer ni que enviar a un modelo (REQ-NOR-023).
+        extraccion = SIN_TEXTO if esta_ausente(texto.valor) else self.extractor.extraer(texto.valor)
         lead = Lead(
             lead_id=lead_id,
             source=self.perfil.source,

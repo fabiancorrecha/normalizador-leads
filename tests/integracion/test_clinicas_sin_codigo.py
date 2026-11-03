@@ -93,10 +93,10 @@ def test_REQ_NOR_017_la_clinica_b_sale_normalizada(salidas):
         "country": "SE",
         "created_at": "2026-10-22T07:41:00Z",
         "enquiry_text": leads["clinica_b:CV-2026-0881"]["enquiry_text"],
-        "specialty": None,
+        "specialty": "traumatología",  # extraídos del texto por diccionario (T-001-6)
         "urgency": "media",
-        "has_reports": None,
-        "language": None,
+        "has_reports": True,
+        "language": "en",
     }
     assert leads["clinica_b:CV-2026-0881"]["enquiry_text"].startswith("Hi, I am looking into hip")
     assert leads["clinica_b:CV-2026-0884"]["email"] is None
@@ -117,10 +117,10 @@ def test_REQ_NOR_017_la_clinica_c_sale_normalizada_con_su_cuarentena(salidas):
         "country": "NO",
         "created_at": "2026-10-27T23:00:00Z",  # 10/28/2026 (mm/dd) en Europe/Oslo, ya en UTC+1
         "enquiry_text": leads["clinica_c:L-0001"]["enquiry_text"],
-        "specialty": None,
-        "urgency": "media",
-        "has_reports": None,
-        "language": None,
+        "specialty": "traumatología",  # extraídos del texto por diccionario (T-001-6)
+        "urgency": "baja",
+        "has_reports": True,
+        "language": "no",
     }
     assert informe["referencia"] == "2026-11-02T08:30:00Z"  # `export.fecha`, en mm/dd/aaaa hh:mm
     assert leads["clinica_c:L-0006"]["full_name"] == "Emma"  # apellidos vacíos
