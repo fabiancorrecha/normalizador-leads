@@ -1,0 +1,20 @@
+# Perfil de la clínica A (Clínica Sanar, export de su CRM, versión 1.4): lo que el reranking no puede
+# saber por sí solo. El mapeo de los campos lo resuelve el diccionario; aquí solo iría un `mapeo`
+# explícito si un campo quedara dudoso.
+source: clinica_a
+
+# Ruta (con puntos) a la lista de registros dentro del export.
+registros: registros
+
+zona_horaria: Europe/Madrid
+
+fechas:
+  # El export mezcla formatos, así que el orden día/mes no se da por hecho: una fecha que admite las
+  # dos lecturas (03/04/2026) queda en null con `fecha_ambigua` en vez de adivinarse.
+  formatos: ["%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d", "%d-%b-%Y", "epoch_s"]
+  antiguedad_maxima_dias: 180
+
+# La fecha del export es la referencia del rango plausible; si falta o no se puede leer, la carga para.
+exportado:
+  ruta: exportado
+  formatos: ["%d/%m/%Y %H:%M"]
