@@ -9,3 +9,7 @@ node_modules/
 .kit/
 .claude/worktrees/
 graphify-out/
+# Salidas del normalizador e histórico de calidad: son datos de salud y nunca van a git.
+# Ancladas a la raíz: tests/datos/ (exports sintéticos de prueba) sí va a git.
+/salida/
+/datos/

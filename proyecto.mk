@@ -10,11 +10,12 @@
 # herramienta tiene que estar también en la CI: en Python, ponla en requirements-dev.txt (ci.yml lo
 # instala); en Node, en devDependencies. Ejemplos:
 # LINT_CMD = $(PY) -m ruff check src tests/unit && $(PY) -m ruff format --check src tests/unit  # Python
-# Recomendado para este proyecto; lo activa T-001-1, que instala ruff en requirements-dev.txt:
-# LINT_CMD = $(PY) -m ruff check src tests/unit tests/integracion && $(PY) -m ruff format --check src tests/unit tests/integracion
 # LINT_CMD = npx eslint src && npx prettier --check src                                     # JS/TS
 # LINT_CMD = test -z "$$(gofmt -l ./internal ./cmd)" && go vet ./...                        # Go
 # LINT_CMD = cargo fmt --check && cargo clippy -- -D warnings                               # Rust
+# Este proyecto: ruff sobre todo el código propio. Las piezas del kit quedan fuera con `extend-exclude`
+# en pyproject.toml, y lo que ignora git (.venv/, .kit/) también.
+LINT_CMD = $(PY) -m ruff check . && $(PY) -m ruff format --check .
 
 # Despliegue (solo lo ejecuta el pipeline). Ejemplos:
 # DEPLOY_CMD   = fly deploy --app mi-app-$(ENTORNO)

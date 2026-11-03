@@ -1,0 +1,47 @@
+[build-system]
+# hatchling no deja carpetas *.egg-info en src/ al instalar en modo editable.
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "normalizador"
+version = "0.1.0"
+description = "Normaliza los leads de cualquier clínica a un esquema común solo con configuración"
+requires-python = ">=3.13"
+# Versiones fijadas con al menos 7 días de antigüedad al elegirlas: súbelas a propósito.
+dependencies = [
+    "pydantic==2.14.1",
+    "PyYAML==6.0.3",
+    "phonenumbers==9.0.42",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/normalizador"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+# Las piezas del kit tienen su propio estilo y no se tocan desde este proyecto.
+extend-exclude = [
+    "evals/",
+    ".claude/",
+    "prompts/",
+    "tests/carga/",
+    "tests/e2e/",
+    "tests/test_guardrails.py",
+    "tests/test_reglas_proyecto.py",
+    "tests/test_kit.py",
+    # Los documentos no son código: sin esto, ruff format revisaría sus bloques de Python.
+    "*.md",
+]
+
+[tool.ruff.lint]
+# DTZ: ningún datetime sin zona horaria (convención «Tiempo» de docs/arquitectura.md).
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "DTZ"]
+
+[tool.ruff.lint.per-file-ignores]
+# Los tests usan assert y lanzan la CLI como un proceso aparte a propósito.
+"tests/**" = ["S101", "S603"]

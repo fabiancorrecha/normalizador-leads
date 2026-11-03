@@ -1,0 +1,4 @@
+# Desarrollo y CI: herramientas de test y calidad, más el propio proyecto en modo editable.
+pytest==9.1.1
+ruff==0.17.3
+-e .
