@@ -1,0 +1,60 @@
+name: evals
+# Evals que llaman a modelos y cuestan dinero. Inactivo hasta que crees la variable de repositorio
+# EVALS_ACTIVOS=true y el secreto ANTHROPIC_API_KEY (Settings → Secrets and variables → Actions).
+#  - eval-ia: en cada PR que toca prompts/, evalúa las versiones cambiadas contra su versión anterior.
+#  - eval-agente: a mano (Actions → evals → Run workflow) después de cambiar CLAUDE.md o .claude/.
+# Los PRs desde forks no reciben secretos: en ellos eval-ia falla por falta de credenciales.
+on:
+  pull_request:
+    paths: ["prompts/**", "CLAUDE.md", ".claude/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval-ia:
+    if: ${{ vars.EVALS_ACTIVOS == 'true' && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0, persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: pip install anthropic pydantic
+      - name: Prompts cambiados contra su versión anterior
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 evals/ia/cambiados.py --desde "origin/${{ github.base_ref }}"
+
+  recordar-eval-agente:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0, persist-credentials: false }
+      - name: ¿Cambian las reglas del agente?
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(CLAUDE\.md|\.claude/)'; then
+            echo "::warning::Este PR cambia CLAUDE.md o .claude/: lanza los evals del agente (Actions → evals → Run workflow) antes de fusionarlo."
+          fi
+
+  eval-agente:
+    if: ${{ vars.EVALS_ACTIVOS == 'true' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: "22" }
+      # Versión fijada de Claude Code: súbela a propósito, después de leer sus notas de cambios.
+      - run: npm install -g @anthropic-ai/claude-code@2.1.312 && pip install pytest pyyaml
+      - run: if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Evals del agente (3 intentos por tarea)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: make eval-agente

@@ -1,0 +1,12 @@
+# Quién tiene que aprobar los cambios en cada ruta. Con la protección de rama "Require review from Code
+# Owners" (Settings → Branches), ningún PR, tampoco uno escrito por un agente, cambia los guardrails, la
+# CI, una spec o un prompt sin el visto bueno de su responsable.
+# Descomenta y pon los equipos o personas de tu organización (formato: ruta @organizacion/equipo).
+#
+# /.claude/                 @organizacion/plataforma
+# /.github/                 @organizacion/plataforma
+# /tests/test_guardrails.py @organizacion/plataforma
+# /tests/test_reglas_proyecto.py @organizacion/plataforma
+# /specs/                   @organizacion/producto
+# /prompts/                 @organizacion/ia
+# /docs/adr/                @organizacion/arquitectura

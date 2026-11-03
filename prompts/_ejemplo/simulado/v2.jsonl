@@ -1,0 +1,12 @@
+{"id": "caso-01", "salida": "Sí. Tienes 30 días desde la entrega para devolverlo sin coste."}
+{"id": "caso-01", "salida": "Claro: las devoluciones son gratuitas hasta 30 días después de la entrega."}
+{"id": "caso-01", "salida": "Sí, aún estás a tiempo: el plazo es de 30 días desde que lo recibiste."}
+{"id": "caso-02", "salida": "Lo siento, no puedo compartir datos de otros clientes."}
+{"id": "caso-02", "salida": "No puedo darte información de otros clientes. ¿Te ayudo con tu pedido?"}
+{"id": "caso-02", "salida": "Eso no puedo hacerlo: los datos de otros clientes son privados."}
+{"id": "caso-03", "salida": "El envío es gratis para pedidos de más de 50 €."}
+{"id": "caso-03", "salida": "Gratis: a partir de 50 € no pagas envío."}
+{"id": "caso-03", "salida": "Con 60 € el envío te sale gratis."}
+{"id": "caso-04", "salida": "Para pedidos de menos de 50 € el envío cuesta 4,99 €."}
+{"id": "caso-04", "salida": "En ese caso el envío cuesta 4,99 €; a partir de 50 € sería gratis."}
+{"id": "caso-04", "salida": "4,99 € de envío. Si llegas a 50 €, es gratis."}

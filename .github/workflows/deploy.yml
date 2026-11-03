@@ -1,0 +1,69 @@
+name: deploy
+# Claude prepara el cambio; este pipeline lo despliega; una persona lo aprueba (entorno "produccion").
+# Inactivo hasta que definas DEPLOY_CMD, SMOKE_CMD y ROLLBACK_CMD en proyecto.mk y crees la variable de
+# repositorio DESPLIEGUE_ACTIVO=true (Settings → Secrets and variables → Actions → Variables).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  verificar:
+    if: ${{ vars.DESPLIEGUE_ACTIVO == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: pip install pytest pyyaml
+      - run: if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - run: make check
+
+  staging:
+    needs: verificar
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - run: make deploy ENTORNO=staging
+      - run: make smoke ENTORNO=staging
+      # Requisitos no funcionales contra staging antes de pedir la aprobación de producción: carga (k6),
+      # interfaz y accesibilidad (Playwright + axe-core). Se activan con las variables NFR_ACTIVOS=true
+      # y URL_STAGING (la URL pública de staging).
+      - if: ${{ vars.NFR_ACTIVOS == 'true' }}
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - if: ${{ vars.NFR_ACTIVOS == 'true' }}
+        uses: grafana/setup-k6-action@43b9fc21641a76002687994433dd586f56e791b1 # v1.2.2
+        with: { k6-version: "2.3.0" }
+      - name: Carga, interfaz y accesibilidad contra staging
+        if: ${{ vars.NFR_ACTIVOS == 'true' }}
+        env:
+          URL_ENTORNO: ${{ vars.URL_STAGING }}
+        run: |
+          pip install pytest playwright==1.63.0
+          python -m playwright install --with-deps chromium
+          make carga e2e URL_ENTORNO="$URL_ENTORNO"
+
+  produccion:
+    needs: staging
+    runs-on: ubuntu-latest
+    # Configura "Required reviewers" en Settings → Environments → produccion: aprobación humana.
+    environment: produccion
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - run: make deploy ENTORNO=produccion
+      - run: make smoke ENTORNO=produccion
+      - name: Vuelta atrás si las pruebas de humo fallan
+        if: failure()
+        run: make rollback ENTORNO=produccion

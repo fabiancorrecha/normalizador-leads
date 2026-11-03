@@ -1,0 +1,57 @@
+[
+  {
+    "ref": "CV-2026-0881",
+    "first_name": "Linnea",
+    "last_name": "Johansson",
+    "mail": "linnea.johansson@example.se",
+    "mobile": "+46 70 221 9043",
+    "residence": "SE",
+    "enquiry": "Hi, I am looking into hip replacement surgery. My orthopaedic surgeon in Stockholm has recommended it but the waiting list here is over a year. I have X-rays and a full report. I could travel in January or February. What would the total cost be including the stay?",
+    "received_at": "2026-10-22T09:41:00+02:00",
+    "channel": "website_form"
+  },
+  {
+    "ref": "CV-2026-0882",
+    "first_name": "Marco",
+    "last_name": "Ferrari",
+    "mail": "m.ferrari@example.it",
+    "mobile": "+39 335 772 4418",
+    "residence": "IT",
+    "enquiry": "Buongiorno, vorrei informazioni su un intervento di chirurgia bariatrica. Non ho fretta, sto valutando diverse opzioni in Europa. Non ho ancora fatto esami specifici. Preferisco essere contattato via email in italiano o inglese.",
+    "received_at": "2026-10-20T16:12:00+02:00",
+    "channel": "phone"
+  },
+  {
+    "ref": "CV-2026-0883",
+    "first_name": "Aisha",
+    "last_name": "Rahman",
+    "mail": "aisha.rahman@example.com",
+    "mobile": "+880 1711 556677",
+    "residence": "BD",
+    "enquiry": "Assalamu alaikum. My mother needs cancer treatment, oncology. The doctors here say it is advanced and we must act very fast. We have all the biopsy reports and scans ready to send. Please tell us urgently if you can help and what it costs.",
+    "received_at": "2026-10-26T05:03:00+06:00",
+    "channel": "whatsapp"
+  },
+  {
+    "ref": "CV-2026-0884",
+    "first_name": "Tomasz",
+    "last_name": "Nowak",
+    "mail": null,
+    "mobile": "+48 601 448 920",
+    "residence": "PL",
+    "enquiry": "Dzień dobry, interesuje mnie operacja zaćmy dla mojej matki. Mamy wyniki badań okulistycznych. Termin elastyczny, najlepiej wiosną.",
+    "received_at": "2026-10-18T11:30:00+02:00",
+    "channel": "website_form"
+  },
+  {
+    "ref": "CV-2026-0885",
+    "first_name": "Grace",
+    "last_name": "Okafor",
+    "mail": "grace.okafor@example.ng",
+    "mobile": "+234 803 221 7788",
+    "residence": "NG",
+    "enquiry": "Hello. I am interested in a full fertility assessment and possible IVF. This is quite urgent for us as I am 41. We have some previous test results from a clinic in Lagos. Could someone call me?",
+    "received_at": "2026-10-25T14:55:00+01:00",
+    "channel": "referral"
+  }
+]

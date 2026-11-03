@@ -1,0 +1,16 @@
+# Dependabot propone por PR las actualizaciones (también de las acciones fijadas por SHA) y pasan por
+# la CI como cualquier cambio. El enfriamiento evita adoptar una versión recién publicada: las versiones
+# maliciosas suelen detectarse y retirarse en pocos días.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      acciones: { patterns: ["*"] }
+  # Descomenta el ecosistema de tu proyecto (pip, npm, gomod, cargo, bundler, composer, maven…):
+  # - package-ecosystem: pip
+  #   directory: /
+  #   schedule: { interval: weekly }
+  #   cooldown: { default-days: 7 }

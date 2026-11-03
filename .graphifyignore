@@ -1,0 +1,26 @@
+# Qué deja fuera del mapa del código `make mapa` (graphify). Sintaxis de .gitignore; graphify también
+# respeta el .gitignore del proyecto. Es tuyo: añade lo que no quieras en el mapa.
+
+# Piezas del kit: no son tu código y llenarían el mapa de ruido
+.claude/
+.github/
+evals/
+tests/test_guardrails.py
+tests/test_kit.py
+specs/_plantilla/
+docs/plantillas/
+docs/guias/
+docs/checklists/
+docs/prompts.md
+docs/adr/0000-plantilla.md
+docs/adr/README.md
+docs/diagramas/README.md
+prompts/README.md
+prompts/_ejemplo/
+
+# Nunca en el mapa
+.kit/
+.kit-backup/
+secrets/
+.env
+.env.*
