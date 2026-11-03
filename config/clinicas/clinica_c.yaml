@@ -1,0 +1,18 @@
+# Perfil de la clínica C (sintética, noruega): la tercera clínica, con nombres de campo y estructura
+# distintos de A y B, que entra sin tocar código (REQ-NOR-017). Los registros van en `datos.leads`, el
+# nombre viene en dos campos anidados (`paciente.nombre` + `paciente.apellidos`), las fechas en
+# mm/dd/aaaa y la fecha del export en `export.fecha`.
+source: clinica_c
+
+registros: datos.leads
+
+zona_horaria: Europe/Oslo
+
+fechas:
+  # Solo mm/dd: su sistema escribe siempre el mes primero, así que 03/04/2026 es el 4 de marzo.
+  formatos: ["%m/%d/%Y"]
+  antiguedad_maxima_dias: 180
+
+exportado:
+  ruta: export.fecha
+  formatos: ["%m/%d/%Y %H:%M"]

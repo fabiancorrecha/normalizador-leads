@@ -1,0 +1,16 @@
+# Perfil de la clínica B: su export es una lista de registros en la raíz, con las fechas en ISO 8601 y su
+# desfase. El diccionario resuelve todos los campos (ref, first_name + last_name, mail, mobile,
+# residence, received_at, enquiry): no hace falta ningún mapeo explícito.
+source: clinica_b
+
+# El export es la lista: ruta vacía.
+registros: ""
+
+# Las fechas traen su desfase, así que la zona solo se usaría con una fecha sin hora.
+zona_horaria: Europe/Madrid
+
+fechas:
+  formatos: ["iso8601"]
+  # El export no trae fecha de export, así que la referencia del rango es el reloj: una clínica que no
+  # fecha sus exports no puede exigir más de dos años de antigüedad (REC-037: fijar la referencia).
+  antiguedad_maxima_dias: 730

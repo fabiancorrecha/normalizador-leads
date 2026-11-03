@@ -1,0 +1,76 @@
+{
+  "export": {
+    "fecha": "11/02/2026 09:30",
+    "sistema": "Pasientjournal v3",
+    "klinikk": "Klinikk Nord (datos sintéticos)"
+  },
+  "datos": {
+    "leads": [
+      {
+        "codigo": "L-0001",
+        "paciente": { "nombre": "Ingrid", "apellidos": "Berg" },
+        "correo_electronico": "Ingrid.Berg@example.no",
+        "telefono_movil": "912 34 567",
+        "nacionalidad": "Noruega",
+        "fecha_registro": "10/28/2026",
+        "consulta": "Jeg trenger en time for kneoperasjon. Jeg har MR-bilder fra september. Det haster ikke, gjerne i januar.",
+        "canal": "web",
+        "prioridad": 2
+      },
+      {
+        "codigo": "L-0002",
+        "paciente": { "nombre": "Lars", "apellidos": "Haugen" },
+        "correo_electronico": "lars.haugen@example.no",
+        "telefono_movil": "+47 455 12 345",
+        "nacionalidad": "Noruega",
+        "fecha_registro": "10/30/2026",
+        "consulta": "Hello, I would like a consultation about laser eye surgery. No urgency at all. I have not had any tests done yet.",
+        "canal": "telefono",
+        "prioridad": 3
+      },
+      {
+        "codigo": "L-0003",
+        "paciente": { "nombre": "Sofia", "apellidos": "Lindqvist" },
+        "correo_electronico": "sofia.lindqvist@example.se",
+        "telefono_movil": "+46 70 123 45 67",
+        "nacionalidad": "Suecia",
+        "fecha_registro": "10/31/2026",
+        "consulta": "Hej! Min pappa behöver en hjärtoperation så snart som möjligt, läkarna säger att det är allvarligt. Vi har alla undersökningar och journaler.",
+        "canal": "web",
+        "prioridad": 1
+      },
+      {
+        "codigo": "L-0004",
+        "paciente": { "nombre": "Hans", "apellidos": "Müller" },
+        "correo_electronico": null,
+        "telefono_movil": "+49 170 1234567",
+        "nacionalidad": "Alemania",
+        "fecha_registro": "03/04/2026",
+        "consulta": "Ich brauche einen Termin für eine Hüftoperation, möglichst in den nächsten Wochen. Die Berichte und Röntgenbilder habe ich.",
+        "canal": "referido",
+        "prioridad": 1
+      },
+      {
+        "paciente": { "nombre": "Mette", "apellidos": "Jensen" },
+        "correo_electronico": "mette.jensen@example.dk",
+        "telefono_movil": "+45 20 12 34 56",
+        "nacionalidad": "Dinamarca",
+        "fecha_registro": "11/01/2026",
+        "consulta": "Jeg vil gerne have en konsultation om fertilitetsbehandling (IVF). Ingen hast, måske til foråret.",
+        "canal": "web",
+        "prioridad": 3
+      },
+      {
+        "codigo": "L-0006",
+        "paciente": { "nombre": "Emma", "apellidos": "" },
+        "correo_electronico": "emma@example.co.uk",
+        "telefono_movil": "07700 900555",
+        "nacionalidad": "Reino Unido",
+        "fecha_registro": "11/02/2026",
+        "consulta": "",
+        "canal": "web",
+        "prioridad": 2
+      }
+    ]
+  }
+}
