@@ -19,10 +19,28 @@ HOOKS = ROOT / ".claude" / "hooks"
 BASH_BLOQUEADOS: list[str] = []
 # Ejemplo: "psql -c 'ALTER TABLE pacientes ENABLE ROW LEVEL SECURITY'"
 BASH_PERMITIDOS: list[str] = []
-# Ejemplo (pagos): ("src/cobros.py", "importe: float = 9.99")
-ARCHIVOS_BLOQUEADOS: list[tuple[str, str]] = []
-# Ejemplo: ("src/cobros.py", "importe_centimos: int = 999")
-ARCHIVOS_PERMITIDOS: list[tuple[str, str]] = []
+ARCHIVOS_BLOQUEADOS: list[tuple[str, str]] = [
+    # Riesgo 1: parseo de fechas que adivina
+    ("src/normalizador/dominio/fechas.py", "from dateutil import parser\n"),
+    ("src/normalizador/dominio/fechas.py", "import dateutil.parser\n"),
+    # Riesgo 1: errores tragados
+    ("src/normalizador/aplicacion/pipeline.py", "try:\n    leer()\nexcept ValueError:\n    pass\n"),
+    ("src/normalizador/adaptadores/lector_json.py", "try:\n    leer()\nexcept Exception: pass\n"),
+    # Riesgo 2: datos personales en logs
+    ("src/normalizador/aplicacion/pipeline.py", "logger.info(f'lead {lead.email} normalizado')\n"),
+    ("src/normalizador/cli.py", "logging.warning('sin fecha: %s', registro['mensaje'])\n"),
+]
+ARCHIVOS_PERMITIDOS: list[tuple[str, str]] = [
+    # Fechas con los formatos del perfil; dateutil fuera de src/ (p. ej. en un script de análisis)
+    ("src/normalizador/dominio/fechas.py", "from datetime import datetime\nvalor = datetime.strptime(texto, formato)\n"),
+    ("tests/unit/dominio/test_fechas.py", "from dateutil import parser\n"),
+    # El error se convierte en aviso, y una variable que empieza por «pass» no es un pass
+    ("src/normalizador/aplicacion/pipeline.py", "except ValueError as error:\n    avisos.append(Aviso('fecha_no_reconocida'))\n"),
+    ("src/normalizador/aplicacion/pipeline.py", "except KeyError:\n    passthrough = None\n"),
+    # Logs con identificadores técnicos
+    ("src/normalizador/aplicacion/pipeline.py", "logger.info('lead normalizado', extra={'lead_id': lead.lead_id})\n"),
+    ("src/normalizador/cli.py", "logging.info('carga terminada', extra={'perfil': perfil, 'leads': total})\n"),
+]
 
 
 def run_hook(hook: str, payload: dict) -> int:

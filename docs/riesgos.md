@@ -5,18 +5,12 @@ según lo que puede salir mal en ESTE proyecto, no de forma genérica.
 
 | Riesgo (lo peor que puede pasar) | Requisito en la spec | Guardrail que lo protege | Test / eval que lo mide |
 |---|---|---|---|
-| [RELLENAR] | REQ-XXX-NNN | [hook, permiso, revisión obligatoria…] | [nombre del test o eval] |
+| **1. Lead perdido o mal normalizado en silencio** (principal): un registro que desaparece sin aviso, una fecha leída al revés (`03/04/2026`), un teléfono sin prefijo interpretado con otra región o un mapeo equivocado que corrompe todos los leads de una clínica. Es un paciente perdido y una plataforma en la que nadie confía | REQ-NOR-002 y REQ-NOR-003 (normalizado o en cuarentena con motivo, 0 perdidos), REQ-NOR-004 a REQ-NOR-007 (dato ambiguo → `null` + aviso, nunca adivinado), REQ-NOR-014 (mapeo dudoso → sin mapear + aviso), REQ-NOR-016 (A y B igual que el mapeo de referencia), REQ-NOR-018 (configuración inválida para la carga) | Reglas propuestas en `.kit/propuestas/reglas_proyecto.py`: bloquean en `src/` el parseo de fechas que adivina (`dateutil`) y los `except …: pass` que tragan errores. Alcance de T-001-5: añadir una clínica no puede tocar `src/` | `tests/integracion/test_sin_perdidas.py` (entrada = normalizados + cuarentena), `tests/unit/dominio/test_fechas.py` (`03/04/2026` → `fecha_ambigua`), `tests/integracion/test_clinicas_sin_codigo.py` (A, B y C contra su mapeo de referencia) |
+| **2. Fuga de datos de salud**: nombre, contacto, el mensaje (que ya es un dato de salud) o un documento de identidad (4422) acaban en logs, en el histórico o en el proveedor de IA sin control (RGPD, art. 9) | REQ-NOR-026 (documento enmascarado hacia el LLM), REQ-NOR-027 (logs solo con IDs y datos técnicos), REQ-NOR-029 (histórico solo con agregados) | Regla propuesta: bloquea en `src/` llamadas a logs con campos personales (`email`, `phone`, `full_name`, `enquiry_text`…). Solo datos sintéticos hasta tener DPA con el proveedor y visto bueno del DPO (REC-001) | `tests/integracion/test_logs_sin_datos_personales.py`, `tests/integracion/test_historico.py` (sin valores), `tests/unit/adaptadores/test_extractor_llm.py` (texto enviado sin el documento) |
+| **3. Extracción con IA manipulada o errónea**: la inyección del 4424 sube un lead a prioridad máxima o una oncología avanzada sale como `baja`, y se prioriza mal a los pacientes | REQ-NOR-024 (salida validada contra enums y respaldo por diccionario), REQ-NOR-025 (instrucciones del texto tratadas como dato) | Prompt versionado (`prompts/extraccion-lead/`) que aprueba una persona; el guardrail del kit impide al agente aprobarlo; `make eval-ia` solo con permiso | Casos `critico` en `prompts/extraccion-lead/casos.jsonl` (4424 nunca `alta`, 0883 siempre `alta`); tests del adaptador con un cliente falso (salida inválida, timeout, `refusal`) |
 
 Cuando definas el guardrail, añade su regla en `.claude/hooks/reglas_proyecto.py` (lista `BASH` para
 comandos, `ARCHIVOS` para contenido) y, en `tests/test_reglas_proyecto.py`, un caso que debe bloquearse
 y uno legítimo parecido que debe pasar. Ese archivo lo editas tú: Claude no puede tocar sus guardrails.
-
-## Ejemplos para adaptar
-| Tipo de proyecto | Riesgo | Requisito | Guardrail | Test / eval |
-|---|---|---|---|---|
-| SaaS multi-cliente | Un cliente ve datos de otro | Aislamiento por cliente en la BD | Hook bloquea desactivar el aislamiento | Test cruzado cliente A vs B |
-| Pagos | Cobro doble o importe erróneo | Idempotencia; importes en céntimos (enteros) | Hook bloquea `float` en módulos de dinero | Test de reintentos y redondeo |
-| E-commerce | Vender sin stock | Reserva atómica de stock | Revisión humana obligatoria (CODEOWNERS) | Test de concurrencia |
-| Feature con IA | Respuesta inventada o peligrosa | Solo responde con fuentes; humano en el bucle | Filtro de salida; prompt versionado | Eval con casos críticos y trampa |
-| Herramienta interna | Borrado masivo de datos | Borrado lógico y reversible | Hook bloquea `DROP`/`DELETE` sin `WHERE` | Test de restauración |
-| Datos personales | Fuga de datos personales | Logs solo con IDs | Hook bloquea datos personales en logs | Test que inspecciona los logs |
+Las reglas de los riesgos 1 y 2 están propuestas en `.kit/propuestas/reglas_proyecto.py` y sus casos en
+`.kit/propuestas/test_reglas_proyecto.py`; se aplican con `cp` y se comprueban con `make guardrails`.
